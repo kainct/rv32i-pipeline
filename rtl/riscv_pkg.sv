@@ -37,11 +37,11 @@ package riscv_pkg;
     // ---------- 3-bit funct3 values (bits [14:12]) for the ops
     localparam logic [2:0]
         F3_ADD_SUB = 3'b000,    // add/sub (R-type) and addi (I-type)
-        F3_BEQ     = 3'b000,     // beq
+        F3_BEQ     = 3'b000,    // beq
         F3_AND     = 3'b111,    // and / andi
         F3_OR      = 3'b110,    // or  / ori
         F3_SLT     = 3'b010,    // slt
-        F3_LW_SW   = 3'b010;     // sw / lw
+        F3_LW_SW   = 3'b010;    // sw / lw
 
     // ---------- Superset control bundle; stages ignore what they don't need
     typedef struct packed {
