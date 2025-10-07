@@ -1,4 +1,3 @@
-// Set simulation time units/precision: delays like #1 mean 1 ns, precision to 1 ps
 `timescale 1ns/1ps
 
 // Testbench has no ports (it’s the simulation top)

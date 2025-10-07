@@ -1,4 +1,3 @@
-// sim/tb_imm_extend.sv
 `timescale 1ns/1ps                 
 
 module tb_imm_extend;              
@@ -36,7 +35,7 @@ module tb_imm_extend;
 
     // Build a B-type instruction (e.g., beq)
     function automatic [31:0] build_B(input logic signed [12:0] imm13);
-        // 
+        
         // [31]=imm[12], [30:25]=imm[10:5], [24:20]=rs2, [19:15]=rs1, [14:12]=funct3, [11:8]=imm[4:1], [7]=imm[11], [6:0]=opcode
         // We fix rs2=x2, rs1=x1, funct3=000 (beq), opcode=OP_BRANCH.
         build_B = {imm13[12], imm13[10:5], 5'd2, 5'd1, 3'b000, imm13[4:1], imm13[11], OP_BRANCH };
