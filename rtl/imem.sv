@@ -46,6 +46,18 @@ module imem #(
         end
     end
 
+    // Word index: use only the address bits you need (avoid over-slicing)
+
+    // Number of address bits needed to index DEPTH_WORDS entries.
+    // $clog2(N) returns the smallest k such that 2^k >= N.
+    localparam int AW = (DEPTH_WORDS <= 1) ? 1 : $clog2(DEPTH_WORDS);
+
+    // Convert a byte address into a word index.
+    // - 32-bit instructions are 4 bytes wide, so word index = addr >> 2.
+    // - Drop the two least-significant bits [1:0] (byte offset within a word).
+    // - Take exactly AW bits for the memory index so it scales with DEPTH_WORDS.
+    wire [AW-1:0] widx = addr[AW+1 : 2]; // drop byte offset bits [1:0]
+
     // Combinational ROM read
-    assign r_d = mem[addr[31:2]];
+    assign r_d = mem[widx];
 endmodule
