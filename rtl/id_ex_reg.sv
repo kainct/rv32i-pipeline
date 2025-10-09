@@ -1,0 +1,47 @@
+`timescale 1ns/1ps
+module id_ex_reg #(
+    parameter int XLEN = riscv_pkg::XLEN
+    )(
+    input  logic            clk,
+    input  logic            rst,
+    input  logic            FlushE,   // 1 = bubble (zeros control)
+    input  riscv_pkg::ctrl_s ctrl_d,
+    input  riscv_pkg::data_s data_d,
+    output riscv_pkg::ctrl_s ctrl_e,
+    output riscv_pkg::data_s data_e
+    );
+    
+    import riscv_pkg::*;
+
+    // Bit-cast packed structs to vectors for the generic flop
+    localparam int CTRL_W = $bits(ctrl_s);
+    localparam int DATA_W = $bits(data_s);
+
+    logic [CTRL_W-1:0] ctrl_d_bits, ctrl_e_bits;
+    logic [DATA_W-1:0] data_d_bits, data_e_bits;
+
+    assign ctrl_d_bits = ctrl_d;
+    assign data_d_bits = data_d;
+    assign ctrl_e      = ctrl_e_bits;
+    assign data_e      = data_e_bits;
+
+    // Control: bubble = zeros
+    flop_en_rst_cl #(.WIDTH(CTRL_W), .RESET_VAL('0), .CLEAR_VAL('0)) u_ctrl (
+        .clk(clk), 
+        .rst(rst), 
+        .en(1'b1), 
+        .clr(FlushE),
+        .d(ctrl_d_bits), 
+        .q(ctrl_e_bits)
+    );
+
+    // Data: bubble = zeros (safe)
+    flop_en_rst_cl #(.WIDTH(DATA_W), .RESET_VAL('0), .CLEAR_VAL('0)) u_data (
+        .clk(clk), 
+        .rst(rst), 
+        .en(1'b1), 
+        .clr(FlushE),
+        .d(data_d_bits), 
+        .q(data_e_bits)
+    );
+endmodule
