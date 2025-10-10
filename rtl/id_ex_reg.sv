@@ -1,4 +1,7 @@
 `timescale 1ns/1ps
+
+`include "config.svh"
+
 module id_ex_reg #(
     parameter int XLEN = riscv_pkg::XLEN
     )(
@@ -45,8 +48,9 @@ module id_ex_reg #(
         .q(data_e_bits)
     );
     
-    always_ff @(posedge clk) begin
-        $display("%0t ID/EX: Rs1D=%0d Rs2D=%0d RdD=%0d  -->  Rs1E=%0d Rs2E=%0d RdE=%0d", $time, data_d.Rs1, data_d.Rs2, data_d.Rd, data_e.Rs1, data_e.Rs2, data_e.Rd);
-    end
-
+    `ifdef SIM
+        always_ff @(posedge clk) begin
+            $display("%0t ID/EX: Rs1D=%0d Rs2D=%0d RdD=%0d  -->  Rs1E=%0d Rs2E=%0d RdE=%0d", $time, data_d.Rs1, data_d.Rs2, data_d.Rd, data_e.Rs1, data_e.Rs2, data_e.Rd);
+        end
+    `endif
 endmodule

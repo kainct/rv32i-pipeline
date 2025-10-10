@@ -1,4 +1,7 @@
 `timescale 1ns/1ps
+
+`include "config.svh"
+
 module decode #(
     parameter int XLEN = riscv_pkg::XLEN
     )(
@@ -96,7 +99,9 @@ module decode #(
         .imm_ext (ExtImmD)
     );
     
-    always_ff @(posedge clk) begin
-        $display("%0t D: pc=%08x op=%02x rs1=%0d rs2=%0d rd=%0d imm=%08x", $time, PCD, InstrD[6:0], InstrD[19:15], InstrD[24:20], InstrD[11:7], ExtImmD);
-    end
+    `ifdef SIM
+        always_ff @(posedge clk) begin
+            $display("%0t D: pc=%08x op=%02x rs1=%0d rs2=%0d rd=%0d imm=%08x", $time, PCD, InstrD[6:0], InstrD[19:15], InstrD[24:20], InstrD[11:7], ExtImmD);
+        end
+    `endif
 endmodule

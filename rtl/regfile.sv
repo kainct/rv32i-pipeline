@@ -1,5 +1,7 @@
 `timescale 1ns / 1ps
 
+`include "config.svh"
+
 module regfile #(
     parameter int XLEN = riscv_pkg::XLEN
 )(
@@ -34,6 +36,9 @@ module regfile #(
         if (we3 && (a3 != X0)) rf[a3] <= wd3;
 
     // helpful debug print in sim
-    always_ff @(posedge clk) if (we3)
-        $display("RF: x%0d <= 0x%08x", a3, wd3);
+
+    `ifdef SIM
+        always_ff @(posedge clk) if (we3)
+            $display("RF: x%0d <= 0x%08x", a3, wd3);
+    `endif
 endmodule

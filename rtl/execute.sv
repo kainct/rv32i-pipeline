@@ -1,5 +1,7 @@
 `timescale 1ns/1ps
 
+`include "config.svh"
+
 module execute #(
     parameter int XLEN = riscv_pkg::XLEN
     )(
@@ -162,9 +164,11 @@ module execute #(
     assign Rs2E      = data_e.Rs2;
     assign PCPlus4E  = data_e.PCPlus4;
     
-    always_ff @(posedge clk) begin
-        $strobe("%0t EX: Branch=%0b Zero=%0b Jump=%0b -> PCSrcE=%0b | PCTargetE=%08x", $time, ctrl_e.Branch, ZeroE, ctrl_e.Jump, PCSrcE, PCTargetE);
-    end
+    `ifdef SIM
+        always_ff @(posedge clk) begin
+            $strobe("%0t EX: Branch=%0b Zero=%0b Jump=%0b -> PCSrcE=%0b | PCTargetE=%08x", $time, ctrl_e.Branch, ZeroE, ctrl_e.Jump, PCSrcE, PCTargetE);
+        end
+    `endif
 
 endmodule
 
