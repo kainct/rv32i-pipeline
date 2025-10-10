@@ -74,7 +74,8 @@ module decode #(
 
     // Cast controller outputs to the expected enums
     assign ALUControlD = alu_op_e'(ALUControlD_bits);
-    imm_src_e imm_sel  = imm_src_e'(ImmSrcD);
+    imm_src_e imm_sel;
+    assign imm_sel = imm_src_e'(ImmSrcD);
 
     // ---------- Register file ----------
     regfile u_rf (
@@ -94,4 +95,8 @@ module decode #(
         .imm_src (imm_sel),
         .imm_ext (ExtImmD)
     );
+    
+    always_ff @(posedge clk) begin
+        $display("%0t D: pc=%08x op=%02x rs1=%0d rs2=%0d rd=%0d imm=%08x", $time, PCD, InstrD[6:0], InstrD[19:15], InstrD[24:20], InstrD[11:7], ExtImmD);
+    end
 endmodule

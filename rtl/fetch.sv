@@ -45,4 +45,8 @@ module fetch #(
         .b (32'd4),        // 4-byte instruction step
         .y (PCPlus4F)
     );
+    
+    always_ff @(posedge clk) begin
+        $strobe("%0t IF : PC=%08x PC+4=%08x PCTargetE=%08x PCSrcE=%0b -> PCNext=%08x", $time, PCF, PCPlus4F, PCTargetE, PCSrcE, PCNextF);
+end
 endmodule

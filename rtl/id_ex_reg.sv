@@ -44,4 +44,9 @@ module id_ex_reg #(
         .d(data_d_bits), 
         .q(data_e_bits)
     );
+    
+    always_ff @(posedge clk) begin
+        $display("%0t ID/EX: Rs1D=%0d Rs2D=%0d RdD=%0d  -->  Rs1E=%0d Rs2E=%0d RdE=%0d", $time, data_d.Rs1, data_d.Rs2, data_d.Rd, data_e.Rs1, data_e.Rs2, data_e.Rd);
+    end
+
 endmodule

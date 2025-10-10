@@ -83,7 +83,6 @@ module execute #(
     id_ex_reg #(.XLEN(XLEN)) u_idex (
         .clk   (clk),
         .rst   (rst),
-        .StallE(1'b0),         // no stall yet
         .FlushE(FlushE),       // bubble on control hazard
         .ctrl_d(ctrl_d),
         .data_d(data_d),
@@ -145,9 +144,14 @@ module execute #(
 
     // Beq only for now: take when Branch && Zero, or Jump
     // X-safe: only true when both are known '1'
-    logic branch_taken = (ctrl_e.Branch === 1'b1) && (ZeroE === 1'b1);
-    logic jump_taken   = (ctrl_e.Jump   === 1'b1);
+    
+    logic branch_taken, jump_taken;
+    assign branch_taken = (ctrl_e.Branch === 1'b1) && (ZeroE === 1'b1);
+    assign jump_taken   = (ctrl_e.Jump   === 1'b1);
     assign PCSrcE      = branch_taken || jump_taken;
+    
+    
+    //assign PCSrcE = (ctrl_e.Branch & ZeroE) | ctrl_e.Jump;
 
     // ---------------- Pass-through to MEM ----------------
     assign RegWriteE = ctrl_e.RegWrite;
@@ -157,6 +161,10 @@ module execute #(
     assign Rs1E      = data_e.Rs1;
     assign Rs2E      = data_e.Rs2;
     assign PCPlus4E  = data_e.PCPlus4;
+    
+    always_ff @(posedge clk) begin
+        $strobe("%0t EX: Branch=%0b Zero=%0b Jump=%0b -> PCSrcE=%0b | PCTargetE=%08x", $time, ctrl_e.Branch, ZeroE, ctrl_e.Jump, PCSrcE, PCTargetE);
+    end
 
 endmodule
 

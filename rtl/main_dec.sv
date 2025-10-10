@@ -24,6 +24,7 @@ module main_dec(
             ctrl.RegWrite   = 1'b1;
             ctrl.ResultSrc  = RSRC_ALU;      // ALU result to WB
             ctrl.ALUSrc     = 1'b0;          // use rs2
+            ctrl.ImmSrc    = IMM_I;          // keep enum defined
             alu_op          = 2'b10;         // let alu_dec use funct3/funct7
         end
 
