@@ -10,7 +10,7 @@ module fpga_top (
     logic [31:0] WriteDataM;
     logic        MemWriteM;
 
-    top #(.WIDTH(32)) u_top (
+    top u_top (
         .clk        (CLK100MHZ),
         .rst        (rst_BTN),
         .WriteDataM (WriteDataM),
