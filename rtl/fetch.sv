@@ -34,7 +34,7 @@ module fetch #(
     );
 
     // Instruction memory (combinational read)
-    instr_mem u_imem (
+    imem u_imem (
         .addr (PCF),
         .r_d  (InstrF)
     );
