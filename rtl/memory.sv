@@ -48,7 +48,7 @@ module memory #(
     );
 
     // ---------------- Data memory (combinational read, sync write) ----------------
-    data_mem #(
+    dmem #(
         .WIDTH (XLEN),
         .DEPTH (64)
     ) u_dmem (
