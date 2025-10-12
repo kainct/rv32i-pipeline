@@ -7,12 +7,12 @@
 ---
 
 ## Highlights
-
-- ISA: **RV32I subset** (addi/andi/ori, add/sub/and/or/slt, beq, jal, lw, sw)
-- Hazards: 3-way forwarding, load-use stall, branch/jump flush
-- X-safety: pipeline registers reset to NOP; control bundles defaulted
-- FPGA: Basys3 @ **50 MHz** (timing met), **100 MHz** WIP
-- Debug: `$display` gated behind ``ifdef SIM``; LEDs show `{addr,data}` on stores
+- **ISA:** RV32I subset (addi/andi/ori, add/sub/and/or/slt, beq, jal, lw, sw)
+- **Pipeline:** IF → ID → EX → MEM → WB with **FlushD/FlushE**
+- **Hazards:** 3-way forwarding, **load-use stall**, **branch/jump flush**
+- **X-safety:** Pipeline regs reset to NOP; control bundles defaulted
+- **FPGA:** Basys3 @ **50 MHz** timing met; **100 MHz** in progress
+- **Debug:** LEDs show `{addr,data}` on store; `$display` under ``ifdef SIM``
 
 ---
 
@@ -20,15 +20,29 @@
 
 - [Architecture](#architecture)
 - [Repo Layout](#repo-layout)
-- [Quick Start](#quick-start)
+- [Getting Started](#getting-started)
 - [Simulation](#simulation)
 - [FPGA (Basys3)](#fpga-basys3)
 - [Verification](#verification)
 - [Results](#results)
 - [Design Notes](#design-notes)
+- [Debug Diary](#debug-diary)
+- [Roadmap](#roadmap)
 - [Troubleshooting](#troubleshooting)
 - [License](#license)
 - [Credits](#credits)
+
+---
+
+## 🧩 Architecture
+- **Structure:** 5 stages — IF/ID/EX/MEM/WB with IF/ID, ID/EX, EX/MEM, MEM/WB regs
+- **Control path:** `PCSrcE = (Branch & Zero) | Jump` (continuous assign to avoid X timing)
+- **Immediate/types:** I/S/B/J via `ImmSrc`, sign-extended in Decode
+- **ALU ops:** add, sub, and, or, slt (+ immediate forms via alu_dec)
+- **Forwarding:** Priority MEM > WB on both A/B paths (mux3 with selects `10/01/00`)
+- **Stall/flush:** `lwStall` inserts bubble; `FlushD = PCSrcE`; `FlushE = PCSrcE | lwStall`
+- **Mem model:** Synchronous BRAM-style read/write to match device timing
+- **Reset policy:** IF/ID seeded with NOP (`ADDI x0,x0,0`); all control lines zeroed
 
 ---
 
@@ -64,23 +78,7 @@ rv32i-pipeline/
 
 ```
 
-## Highlights
-- **ISA:** RV32I subset (addi/andi/ori, add/sub/and/or/slt, beq, jal, lw, sw)
-- **Pipeline:** IF → ID → EX → MEM → WB with **FlushD/FlushE**
-- **Hazards:** 3-way forwarding, **load-use stall**, **branch/jump flush**
-- **X-safety:** Pipeline regs reset to NOP; control bundles defaulted
-- **FPGA:** Basys3 @ **50 MHz** timing met; **100 MHz** in progress
-- **Debug:** LEDs show `{addr,data}` on store; `$display` under ``ifdef SIM``
-
-## 🧩 Architecture
-- **Structure:** 5 stages — IF/ID/EX/MEM/WB with IF/ID, ID/EX, EX/MEM, MEM/WB regs
-- **Control path:** `PCSrcE = (Branch & Zero) | Jump` (continuous assign to avoid X timing)
-- **Immediate/types:** I/S/B/J via `ImmSrc`, sign-extended in Decode
-- **ALU ops:** add, sub, and, or, slt (+ immediate forms via alu_dec)
-- **Forwarding:** Priority MEM > WB on both A/B paths (mux3 with selects `10/01/00`)
-- **Stall/flush:** `lwStall` inserts bubble; `FlushD = PCSrcE`; `FlushE = PCSrcE | lwStall`
-- **Mem model:** Synchronous BRAM-style read/write to match device timing
-- **Reset policy:** IF/ID seeded with NOP (`ADDI x0,x0,0`); all control lines zeroed
+---
 
 ## ⚙️ Getting Started
 - **Tools:** Vivado `TODO:version`; Basys3 (XC7A35T); optional Verilator/Questa for sim
@@ -96,6 +94,8 @@ rv32i-pipeline/
 - **Build (sim):** Run your sim tcl or Vivado GUI → Elaborate → Simulate
 - **Build (fpga):** Synthesis → Implementation → Bitstream → Program device
 
+---
+
 ## 🧪 Simulation
 - **Entry point:** `sim/tb_top.sv` (drives clock/reset, loads `final.mem`)
 - **Checks:** Self-checking scoreboard / signature compare `TODO`
@@ -103,6 +103,8 @@ rv32i-pipeline/
 - **Prints:** Regfile writes, ALUSrc/ForwardA/ForwardB, branch decisions under ``SIM``
 - **Pass criteria:** No X after reset; final memory/register signature matches golden
 - **Typical run:** `run 1000ns` completes directed program with expected store
+
+---
 
 ## 🛠️ FPGA (Basys3)
 - **Top wrapper:** `rtl/fpga_top.sv` (ports: `CLK100MHZ`, `rst_BTN`, `LED[15:0]`)
@@ -112,12 +114,16 @@ rv32i-pipeline/
 - **Mem init:** `$readmemh` path valid for synthesis (relative to project dir)
 - **Bring-up tips:** Confirm BRAM inference; ensure synchronous IMEM/DMEM; debounce reset if needed
 
+---
+
 ## ✅ Verification
 - **Directed tests:** ALU/imm, branches (taken/not), lw/sw, hazards (fwdA/B, load-use)
 - **Assertions:** x0 write-protect; control encodings; `FlushD/E` on `PCSrcE/lwStall`
 - **Coverage (optional):** Line/Toggle/Branch/Functional `TODO:%` via simulator
 - **CPI measurement:** Hazard-free loop + mixed microbench; log cycles/instr `TODO`
 - **Pass/fail:** All directed tests pass; final store equals expected (e.g., mem[100]=25)
+
+---
 
 ## 📊 Results
 - **ISA subset:** RV32I core ops listed above
@@ -129,6 +135,8 @@ rv32i-pipeline/
 - **Max Fmax:** `TODO MHz`
 - **Artifacts:** Waveforms (`docs/img/*.png`), bitstreams (`fpga/bitstreams/*.bit`)
 
+---
+
 ## 📝 Design Notes
 - **Continuous `PCSrcE`:** Avoid `===` races by computing on wires, not in `always_comb`
 - **Forwarding order:** Prefer MEM result to minimize stalls; WB as secondary
@@ -137,7 +145,9 @@ rv32i-pipeline/
 - **Synchronous memories:** Match BRAM timing; avoid async sim-only reads
 - **SIM guards:** Keep `$display/$strobe` under ``ifdef SIM``; include `config.svh` in both sim & synth filesets
 
-## 🐞 Debug Diary (curated)
+---
+
+## 🐞 Debug Diary
 - **Taken branch executes next instr**
   - **Cause:** Missing `FlushD` on `PCSrcE`
   - **Fix:** `FlushD = PCSrcE`; squash IF/ID; insert bubble in ID/EX as needed
@@ -155,12 +165,16 @@ rv32i-pipeline/
   - **Fix:** Use synchronous read model
   - **Proof:** Store/load tests now identical
 
+---
+
 ## 🧭 Roadmap
 - **100 MHz close:** Balance EX/MEM paths; consider ALU cut or tighter placement
 - **ISA growth:** bne, lui/auipc, shifts, zero-extend loads
 - **Instr prefetch:** Simple queue to hide IMEM latency
 - **7-seg display:** Hex address/data for stores; activity indicator
 - **Automation:** CI for sim (lint, unit tests); coverage reports export
+
+---
 
 ## 🧩 Troubleshooting
 - **Param override error (`WIDTH`):** Ensure `top` defines `parameter int WIDTH=32` or remove override
@@ -169,15 +183,21 @@ rv32i-pipeline/
 - **Program not running:** Verify `$readmemh` path and IMEM depth; check reset polarity; inspect BRAM inference msgs
 - **X in waves:** Ensure IF/ID = NOP on reset; initialize control bundles; avoid `===` in critical comb logic
 
+---
+
 ## 📄 License
 - **Type:** MIT (or choose another)  
 - **Files:** See `LICENSE`
+
+---
 
 ## 🤝 Credits
 - **Author:** `TODO: your name / handle`
 - **Board:** Digilent Basys3 (XC7A35T)
 - **Spec:** RISC-V RV32I
 - **Thanks:** `TODO: mentors/reviewers/tools`
+
+---
 
 
 
