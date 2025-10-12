@@ -31,6 +31,8 @@ module execute #(
     input  logic [XLEN-1:0]  ALUResultM,       // from MEM
     input  logic [1:0]       ForwardAE,        // 00=RD1E, 01=ResultW, 10=ALUResultM
     input  logic [1:0]       ForwardBE,        // 00=RD2E, 01=ResultW, 10=ALUResultM
+    
+    input logic              IFID_valid,       // MODIFIED
 
     // -------- branch/jump back to IF --------
     output logic             PCSrcE,
@@ -45,7 +47,9 @@ module execute #(
     output logic [4:0]       Rs2E,
     output logic [XLEN-1:0]  ALUResultE,
     output logic [XLEN-1:0]  WriteDataE,       // forwarded RS2 (for stores)
-    output logic [XLEN-1:0]  PCPlus4E
+    output logic [XLEN-1:0]  PCPlus4E,
+    
+    output logic             IDEX_valid        // MODIFIED
     );
     import riscv_pkg::*;
 
@@ -86,10 +90,12 @@ module execute #(
         .clk   (clk),
         .rst   (rst),
         .FlushE(FlushE),       // bubble on control hazard
+        .IFID_valid (IFID_valid),
         .ctrl_d(ctrl_d),
         .data_d(data_d),
         .ctrl_e(ctrl_e),
-        .data_e(data_e)
+        .data_e(data_e),
+        .IDEX_valid (IDEX_valid)
     );
 
     // ---------------- Forwarding muxes ----------------

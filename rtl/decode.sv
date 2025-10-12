@@ -29,9 +29,12 @@ module decode #(
     // datapath out
     output logic [XLEN-1:0]      RD1D, RD2D, PCD,
     output logic [4:0]           Rs1D, Rs2D, RdD,
-    output logic [XLEN-1:0]      ExtImmD, PCPlus4D
+    output logic [XLEN-1:0]      ExtImmD, PCPlus4D,
+    
+    output logic                 IFID_valid //MODIFIED
     );
     import riscv_pkg::*;
+    
 
     // ---------- IF/ID register ----------
     logic [31:0] InstrD;
@@ -45,7 +48,8 @@ module decode #(
         .InstrF(InstrF),
         .PCD(PCD), 
         .PCPlus4D(PCPlus4D), 
-        .InstrD(InstrD)
+        .InstrD(InstrD),
+        .IFID_valid (IFID_valid)  //MODIFIED
     );
 
     // ---------- Field decode ----------

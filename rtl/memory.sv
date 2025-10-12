@@ -14,6 +14,8 @@ module memory #(
     input  logic [XLEN-1:0]  WriteDataE,
     input  logic [XLEN-1:0]  PCPlus4E,
     input  logic [4:0]       RdE,
+    
+    input  logic             IDEX_valid, //MODIFIED
 
     // -------- to MEM/WB (and for testbench visibility) --------
     output logic             RegWriteM,
@@ -23,7 +25,9 @@ module memory #(
     output logic [XLEN-1:0]  ReadDataM,
     output logic [XLEN-1:0]  PCPlus4M,
     output logic [XLEN-1:0]  WriteDataM,
-    output logic [4:0]       RdM
+    output logic [4:0]       RdM,
+    
+    output logic             EXMEM_valid //MODIFIED
     );
     import riscv_pkg::*;
 
@@ -38,13 +42,15 @@ module memory #(
         .WriteDataE (WriteDataE),
         .PCPlus4E   (PCPlus4E),
         .RdE        (RdE),
+        .IDEX_valid (IDEX_valid), //MODIFIED
         .RegWriteM  (RegWriteM),
         .MemWriteM  (MemWriteM),
         .ResultSrcM (ResultSrcM),
         .ALUResultM (ALUResultM),
         .WriteDataM (WriteDataM),
         .PCPlus4M   (PCPlus4M),
-        .RdM        (RdM)
+        .RdM        (RdM),
+        .EXMEM_valid (EXMEM_valid) //MODIFIED
     );
 
     // ---------------- Data memory (combinational read, sync write) ----------------

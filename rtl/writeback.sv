@@ -13,11 +13,15 @@ module writeback #(
     input  logic [XLEN-1:0]  ReadDataM,
     input  logic [XLEN-1:0]  PCPlus4M,
     input  logic [4:0]       RdM,
+    
+    input  logic             EXMEM_valid, //MODIFIED
 
     // to RF + back into pipeline
     output logic             RegWriteW,
     output logic [XLEN-1:0]  ResultW,
-    output logic [4:0]       RdW
+    output logic [4:0]       RdW,
+    
+    output logic             MEMWB_valid //MODIFIED
     );
     import riscv_pkg::*;
 
@@ -34,12 +38,14 @@ module writeback #(
         .ReadDataM  (ReadDataM),
         .PCPlus4M   (PCPlus4M),
         .RdM        (RdM),
+        .EXMEM_valid (EXMEM_valid),
         .RegWriteW  (RegWriteW),
         .ResultSrcW (ResultSrcW),
         .ALUResultW (ALUResultW),
         .ReadDataW  (ReadDataW),
         .PCPlus4W   (PCPlus4W),
-        .RdW        (RdW)
+        .RdW        (RdW),
+        .MEMWB_valid (MEMWB_valid)
     );
 
     // 3-way result mux: ALU / Mem / PC+4

@@ -12,7 +12,9 @@ module if_id_reg #(
     input  logic [31:0]     InstrF,
     output logic [XLEN-1:0] PCD,
     output logic [XLEN-1:0] PCPlus4D,
-    output logic [31:0]     InstrD
+    output logic [31:0]     InstrD,
+    //OPTIONAL:
+    output logic            IFID_valid // MODIFIED
     );
     
     import riscv_pkg::*;
@@ -46,4 +48,15 @@ module if_id_reg #(
         .d(InstrF), 
         .q(InstrD)
     );
+
+    //MODIFIED: VALID bit — set to 1 when a new instr is accepted, cleared on reset/flush
+    flop_en_rst_cl #(.WIDTH(1), .RESET_VAL(1'b0), .CLEAR_VAL(1'b0)) u_valid (
+        .clk(clk), 
+        .rst(rst), 
+        .en(~StallD), 
+        .clr(FlushD),
+        .d(1'b1), 
+        .q(IFID_valid)
+    );
+
 endmodule

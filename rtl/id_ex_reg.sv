@@ -5,13 +5,16 @@
 module id_ex_reg #(
     parameter int XLEN = riscv_pkg::XLEN
     )(
-    input  logic            clk,
-    input  logic            rst,
-    input  logic            FlushE,   // 1 = bubble (zeros control)
+    input  logic             clk,
+    input  logic             rst,
+    input  logic             FlushE,        // 1 = bubble (zeros control)
+    input  logic             IFID_valid,    // MODIFIED: from IF/ID stage
     input  riscv_pkg::ctrl_s ctrl_d,
     input  riscv_pkg::data_s data_d,
     output riscv_pkg::ctrl_s ctrl_e,
-    output riscv_pkg::data_s data_e
+    output riscv_pkg::data_s data_e,
+
+    output logic             IDEX_valid // MODIFIED: to EX
     );
     
     import riscv_pkg::*;
@@ -46,6 +49,16 @@ module id_ex_reg #(
         .clr(FlushE),
         .d(data_d_bits), 
         .q(data_e_bits)
+    );
+
+    // MODIFIED: Valid bit — 1 when a real instr enters ID/EX, 0 on reset/flush
+    flop_en_rst_cl #(.WIDTH(1), .RESET_VAL(1'b0), .CLEAR_VAL(1'b0)) u_valid (
+        .clk(clk), 
+        .rst(rst),
+        .en(1'b1),              // hold during StallE
+        .clr(FlushE),              // bubble on FlushE
+        .d(IFID_valid),            // propagate stage validity
+        .q(IDEX_valid)
     );
     
     `ifdef SIM

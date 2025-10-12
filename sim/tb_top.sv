@@ -31,19 +31,36 @@ module tb_top();
         clk <= 0; 
         # 5;
     end
-
+    
+  
   // check results
     always @(negedge clk) begin
         if(MemWriteM) begin
             if(ALUResultM === 100 & WriteDataM === 25) begin
                 $display("Simulation succeeded");
-                $stop;
+                $finish;   //$stop
             end else if (ALUResultM !== 96) begin
                 $display("Simulation failed");
                 $stop;
             end
         end
     end
+    
+    
+    /*
+    // Pass/fail on final store
+    always @(negedge clk) begin
+        if (MemWriteM) begin
+            if ((ALUResultM === 32'd96) && (WriteDataM === 32'd25)) begin
+                $display("Simulation succeeded");
+                $finish;
+            end else if (ALUResultM !== 32'd96) begin
+                $display("Simulation failed");
+                $stop;
+                end
+        end
+    end
+    */
     
     // After DUT instantiation
     always_ff @(posedge clk) if (!rst) begin
@@ -78,6 +95,26 @@ module tb_top();
                dut.u_execute.SrcBE,
                dut.u_execute.ctrl_e.ALUSrc);
     end
+
+  logic [63:0] cycle_cnt, instr_cnt;
+  logic retire_valid; 
+  assign retire_valid = dut.MEMWB_valid; // adjust hierarchy
+
+  always_ff @(posedge clk) begin
+    if (rst) begin 
+      cycle_cnt <= 0; 
+      instr_cnt <= 0; 
+    end
+    else begin
+      cycle_cnt <= cycle_cnt + 1;
+      if (retire_valid) instr_cnt <= instr_cnt + 1;
+    end
+  end
+
+  final begin
+    real cpi = (instr_cnt!=0) ? (1.0*cycle_cnt/instr_cnt) : 0.0;
+    $display("[CPI] cycles=%0d instr=%0d cpi=%0f", cycle_cnt, instr_cnt, cpi);
+  end
 
 
 endmodule

@@ -47,6 +47,8 @@ module top #(
 
     // -------- forwarding selects --------
     logic [1:0]           ForwardAE, ForwardBE;
+    
+    logic IFID_valid, IDEX_valid, EXMEM_valid, MEMWB_valid;
 
     // ================= IF =================
     fetch #(.XLEN(XLEN)) u_fetch (
@@ -90,7 +92,9 @@ module top #(
         .Rs2D        (Rs2D),
         .RdD         (RdD),
         .ExtImmD     (ExtImmD),
-        .PCPlus4D    (PCPlus4D)
+        .PCPlus4D    (PCPlus4D),
+        
+        .IFID_valid  (IFID_valid)
     );
 
     // ================= EX =================
@@ -123,6 +127,8 @@ module top #(
         .ALUResultM  (ALUResultM),
         .ForwardAE   (ForwardAE),
         .ForwardBE   (ForwardBE),
+        
+        .IFID_valid  (IFID_valid),
 
         // to IF
         .PCSrcE      (PCSrcE),
@@ -137,7 +143,8 @@ module top #(
         .Rs2E        (Rs2E),
         .ALUResultE  (ALUResultE),
         .WriteDataE  (WriteDataE),
-        .PCPlus4E    (PCPlus4E)
+        .PCPlus4E    (PCPlus4E),
+        .IDEX_valid  (IDEX_valid)
     );
 
     // ================= MEM =================
@@ -151,6 +158,8 @@ module top #(
         .WriteDataE  (WriteDataE),
         .PCPlus4E    (PCPlus4E),
         .RdE         (RdE),
+        
+        .IDEX_valid  (IDEX_valid),
 
         .RegWriteM   (RegWriteM_int),
         .MemWriteM   (MemWriteM),     // exported
@@ -159,7 +168,9 @@ module top #(
         .ReadDataM   (ReadDataM),
         .PCPlus4M    (PCPlus4M),
         .WriteDataM  (WriteDataM),    // exported
-        .RdM         (RdM)
+        .RdM         (RdM),
+        
+        .EXMEM_valid (EXMEM_valid)
     );
 
     // ================= WB =================
@@ -172,10 +183,14 @@ module top #(
         .ReadDataM  (ReadDataM),
         .PCPlus4M   (PCPlus4M),
         .RdM        (RdM),
+        
+        .EXMEM_valid (EXMEM_valid),
 
         .RegWriteW  (RegWriteW),
         .ResultW    (ResultW),
-        .RdW        (RdW)
+        .RdW        (RdW),
+        
+        .MEMWB_valid (MEMWB_valid)
     );
 
     // ================= Hazard =================

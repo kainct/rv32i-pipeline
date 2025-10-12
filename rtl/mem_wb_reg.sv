@@ -14,14 +14,19 @@ module mem_wb_reg #(
     input  logic [XLEN-1:0]  PCPlus4M,
     input  logic [4:0]       RdM,
 
+    input  logic             EXMEM_valid,         // MODIFIED: stage-valid from EX/MEM
+
     // to WB
     output logic             RegWriteW,
     output logic [1:0]       ResultSrcW,
     output logic [XLEN-1:0]  ALUResultW,
     output logic [XLEN-1:0]  ReadDataW,
     output logic [XLEN-1:0]  PCPlus4W,
-    output logic [4:0]       RdW
+    output logic [4:0]       RdW,
+
+    output logic             MEMWB_valid //MODIFIED
     );
+
     import riscv_pkg::*;
 
     // Pack widths: 1 (RegWrite) + 2 (ResultSrc) + 5 (Rd) + 3*XLEN = 3*XLEN + 8
@@ -38,5 +43,15 @@ module mem_wb_reg #(
         .clr (1'b0),   // no WB flush; upstream flushes suffice
         .d   ({RegWriteM, ResultSrcM, ALUResultM, ReadDataM, RdM, PCPlus4M}),
         .q   ({RegWriteW, ResultSrcW, ALUResultW, ReadDataW, RdW, PCPlus4W})
+    );
+
+    // Stage-valid bit (retirement happens when MEMWB_valid is 1 at WB)
+    flop_en_rst_cl #(.WIDTH(1), .RESET_VAL(1'b0), .CLEAR_VAL(1'b0)) u_valid (
+        .clk(clk), 
+        .rst(rst), 
+        .en(1'b1), 
+        .clr(1'b0),
+        .d(EXMEM_valid), 
+        .q(MEMWB_valid)
     );
 endmodule

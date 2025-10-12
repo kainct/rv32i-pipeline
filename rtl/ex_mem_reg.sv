@@ -17,6 +17,8 @@ module ex_mem_reg #(
     input  logic [XLEN-1:0]  PCPlus4E,
     input  logic [4:0]       RdE,
 
+    input logic              IDEX_valid, // MODIFIED: from ID_EX stage
+
     // ---- to MEM ----
     output logic             RegWriteM,
     output logic             MemWriteM,
@@ -24,7 +26,9 @@ module ex_mem_reg #(
     output logic [XLEN-1:0]  ALUResultM,
     output logic [XLEN-1:0]  WriteDataM,
     output logic [XLEN-1:0]  PCPlus4M,
-    output logic [4:0]       RdM
+    output logic [4:0]       RdM,
+
+    output logic             EXMEM_valid
     );
     
     import riscv_pkg::*;
@@ -56,5 +60,15 @@ module ex_mem_reg #(
         .clr (1'b0),   
         .d   ({ctrlE, dataE}),
         .q   ({ctrlM, dataM})
+    );
+
+    // MODIFIED: Valid bit — 1 when a real instr enters ID/EX, 0 on reset/flush
+    flop_en_rst_cl #(.WIDTH(1), .RESET_VAL(1'b0), .CLEAR_VAL(1'b0)) u_valid (
+        .clk(clk), 
+        .rst(rst),
+        .en(1'b1),                 // hold during StallE
+        .clr(1'b0),                // bubble on FlushE
+        .d(IDEX_valid),            // propagate stage validity
+        .q(EXMEM_valid)
     );
 endmodule
