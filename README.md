@@ -62,7 +62,9 @@ rv32i-pipeline/
    ├─ build_sim.tcl                    # optional Vivado sim script
    └─ build_fpga.tcl                   # optional Vivado synth/impl script
 
-## 🔎 Highlights
+```
+
+## Highlights
 - **ISA:** RV32I subset (addi/andi/ori, add/sub/and/or/slt, beq, jal, lw, sw)
 - **Pipeline:** IF → ID → EX → MEM → WB with **FlushD/FlushE**
 - **Hazards:** 3-way forwarding, **load-use stall**, **branch/jump flush**
