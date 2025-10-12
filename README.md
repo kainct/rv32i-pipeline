@@ -41,7 +41,8 @@
 - **ALU ops:** add, sub, and, or, slt (+ immediate forms via alu_dec)
 - **Forwarding:** Priority MEM > WB on both A/B paths (mux3 with selects `10/01/00`)
 - **Stall/flush:** `lwStall` inserts bubble; `FlushD = PCSrcE`; `FlushE = PCSrcE | lwStall`
-- **Mem model:** Synchronous BRAM-style read/write to match device timing
+- **Instruction memory:** Combinational ROM (LUT‑based) with optional `$readmemh` preload via `MEMFILE` parameter; defaults to a small hard‑coded program for bring‑up
+- **Data memory:** Synchronous BRAM-style read/write to match device timing
 - **Reset policy:** IF/ID seeded with NOP (`ADDI x0,x0,0`); all control lines zeroed
 
 ---
@@ -60,13 +61,14 @@ rv32i-pipeline/
 │  └─ postmortem.md                    # what to improve next
 ├─ rtl/
 │  ├─ *.sv                             # core RTL (pkg, decode, execute, hazard, ...)
-│  ├─ riscv_pkg.sv
-│  ├─ config.svh                       # `define SIM` for sim-only prints
+│  ├─ riscv_pkg.sv                     # RISC-V constants + decode/ALU enums + control/pipe bundle typedefs 
+│  ├─ include
+   │  └─ config.svh                    # `define SIM` for sim-only prints
 │  └─ fpga_top.sv                      # LEDs wrapper for Basys3
 ├─ sim/
 │  ├─ tb_top.sv                        # testbench
-│  ├─ test_programs/
-│  │  └─ final.mem                     # program image (change path if needed)
+│  ├─ final.hex                        # program image
+│  ├─ *.sv                             # testbenches for modules                     
 │  └─ waves/                           # .wcfg /.vcd dumps
 ├─ fpga/
 │  ├─ basys3.xdc                       # pin constraints
@@ -81,28 +83,41 @@ rv32i-pipeline/
 ---
 
 ## ⚙️ Getting Started
-- **Tools:** Vivado `TODO:version`; Basys3 (XC7A35T); optional Verilator/Questa for sim
-- **Clone:** `git clone https://github.com/<you>/rv32i-pipeline && cd rv32i-pipeline`
+- **Tools:** Vivado 2022.1; Basys3 (XC7A35T)
+- **Clone:** `git clone https://github.com/kainct/rv32i-pipeline && cd rv32i-pipeline`
 - **Filesets:** Add `rtl/*.sv`, `rtl/config.svh`, `rtl/fpga_top.sv`, `fpga/basys3.xdc`
-- **Program image:** Place at `sim/test_programs/final.mem` (or update IMEM path)
+- **Program image:** Place at `sim/final.hex`
 - **Defines:** `config.svh` contains:
   - ```systemverilog
     `ifndef SYNTHESIS
       `define SIM
     `endif
     ```
-- **Build (sim):** Run your sim tcl or Vivado GUI → Elaborate → Simulate
-- **Build (fpga):** Synthesis → Implementation → Bitstream → Program device
+- **Build (sim):** Vivado GUI → Flow Navigator → Simulation
+- **Build (fpga):** Vivado GUI → Flow Navigator → Synthesis → Implementation → Bitstream → Program device
 
 ---
 
 ## 🧪 Simulation
-- **Entry point:** `sim/tb_top.sv` (drives clock/reset, loads `final.mem`)
-- **Checks:** Self-checking scoreboard / signature compare `TODO`
-- **Waveforms:** Dump `VCD/WCFG` for hazards (forwarding, stalls, flushes)
-- **Prints:** Regfile writes, ALUSrc/ForwardA/ForwardB, branch decisions under ``SIM``
-- **Pass criteria:** No X after reset; final memory/register signature matches golden
-- **Typical run:** `run 1000ns` completes directed program with expected store
+- **Entry point:** `sim/tb_top.sv` — instantiates `top`, generates clock/reset, and connects to `imem`.
+- **Clock/reset:** `CLK_PERIOD = 20 ns` (50 MHz). Reset asserted for the first **5** cycles, then de-asserted.
+- **Program load:** IMEM is a combinational ROM with optional `$readmemh` preload set **at elaboration** via the `MEMFILE` parameter. If `MEMFILE` is empty, a small hard-coded program is used.
+  ```systemverilog
+  // In tb_top.sv or top-level
+  imem #(
+    .DEPTH_WORDS(64),
+    .MEMFILE("sim/test_programs/final.hex")  // 32-bit words, ASCII hex
+  ) u_imem (
+    .addr(pc),   // byte address (PC)
+    .r_d(instr)  // 32-bit instruction
+  );
+- **Run control:** Testbench stops when the **expected store** is observed (e.g., `mem[0x00000064] = 32'd25`) and calls `$finish`; otherwise hits a **cycle limit** (e.g., `MAX_CYCLES = 10000`) and `$fatal("TIMEOUT")`.
+- **Checks/Assertions:** `x0` write-protect; no **X** after reset on key controls (`PCSrcE`, `FlushD`, `FlushE`, `MemWriteM`).
+- **Waveforms:** VCD via `$dumpfile("sim/waves/run.vcd"); $dumpvars(0, tb_top);` and/or an XSim `.wcfg` focused on forwarding, stalls, and flushes.
+- **Debug prints:** Under ``SIM``: regfile writebacks; `ForwardA/ForwardB`; `lwStall`; `FlushD/FlushE`; branch decisions.
+- **Pass criteria:** No **X** after reset; `x0 == 0` always; expected terminating store observed (and signature matches if signature mode is enabled).
+- **Typical runs:** **Vivado XSim (GUI):** Run All or `run 1000 ns`
+
 
 ---
 
@@ -186,13 +201,13 @@ rv32i-pipeline/
 ---
 
 ## 📄 License
-- **Type:** MIT (or choose another)  
+- **Type:** MIT  
 - **Files:** See `LICENSE`
 
 ---
 
 ## 🤝 Credits
-- **Author:** `TODO: your name / handle`
+- **Author:** `Kai Nguyen (kainct)`
 - **Board:** Digilent Basys3 (XC7A35T)
 - **Spec:** RISC-V RV32I
 - **Thanks:** `TODO: mentors/reviewers/tools`
