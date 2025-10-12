@@ -41,8 +41,8 @@
 - **ALU ops:** add, sub, and, or, slt (+ immediate forms via alu_dec)
 - **Forwarding:** Priority MEM > WB on both A/B paths (mux3 with selects `10/01/00`)
 - **Stall/flush:** `lwStall` inserts bubble; `FlushD = PCSrcE`; `FlushE = PCSrcE | lwStall`
-- **Instruction memory:** Combinational ROM (LUT‑based) with optional `$readmemh` preload via `MEMFILE` parameter; defaults to a small hard‑coded program for bring‑up
-- **Data memory:** Synchronous BRAM-style read/write to match device timing
+- **Instruction memory:** Combinational ROM (LUT-based) with optional `$readmemh` preload via `MEMFILE` parameter; defaults to a small hard-coded program for bring-up
+- **Data memory:** **Synchronous, currently inferred as LUTRAM** (64 words) for small depth; BRAM-ready (switch to `(* ram_style="block" *)` and keep **registered read** when scaling)
 - **Reset policy:** IF/ID seeded with NOP (`ADDI x0,x0,0`); all control lines zeroed
 
 ---
@@ -63,7 +63,7 @@ rv32i-pipeline/
 │  ├─ *.sv                             # core RTL (pkg, decode, execute, hazard, ...)
 │  ├─ riscv_pkg.sv                     # RISC-V constants + decode/ALU enums + control/pipe bundle typedefs 
 │  ├─ include
-   │  └─ config.svh                    # `define SIM` for sim-only prints
+│  │  └─ config.svh                    # `define SIM` for sim-only prints
 │  └─ fpga_top.sv                      # LEDs wrapper for Basys3
 ├─ sim/
 │  ├─ tb_top.sv                        # testbench
@@ -72,6 +72,8 @@ rv32i-pipeline/
 │  └─ waves/                           # .wcfg /.vcd dumps
 ├─ fpga/
 │  ├─ basys3.xdc                       # pin constraints
+│  ├─ ip/
+│  │  └─ clk_wiz_0/clk_wiz_0.xci       # Clocking Wizard (100 MHz → 50 MHz)
 │  ├─ bitstreams/                      # exported .bit files
 │  └─ mem/                             # BRAM inits for FPGA (optional)
 └─ scripts/
@@ -85,13 +87,16 @@ rv32i-pipeline/
 ## ⚙️ Getting Started
 - **Tools:** Vivado 2022.1; Basys3 (XC7A35T)
 - **Clone:** `git clone https://github.com/kainct/rv32i-pipeline && cd rv32i-pipeline`
-- **Filesets:** Add `rtl/*.sv`, `rtl/config.svh`, `rtl/fpga_top.sv`, `fpga/basys3.xdc`
-- **Program image:** Place at `sim/final.hex`
-- **Defines:** `config.svh` contains:
-  - ```systemverilog
-    `ifndef SYNTHESIS
-      `define SIM
-    `endif
+- **Filesets (add to project):**
+  - RTL: `rtl/*.sv`, `rtl/include/config.svh`, `rtl/fpga_top.sv`
+  - Constraints: `fpga/basys3.xdc`
+  - **IP:** `fpga/ip/clk_wiz_0/clk_wiz_0.xci` (Clocking Wizard 100 MHz → 50 MHz)
+- **Program image:** `sim/final.hex`
+- **Defines:** in `config.svh`
+  ```systemverilog
+  `ifndef SYNTHESIS
+    `define SIM
+  `endif
     ```
 - **Build (sim):** Vivado GUI → Flow Navigator → Simulation
 - **Build (fpga):** Vivado GUI → Flow Navigator → Synthesis → Implementation → Bitstream → Program device
@@ -99,118 +104,111 @@ rv32i-pipeline/
 ---
 
 ## 🧪 Simulation
-- **Entry point:** `sim/tb_top.sv` — instantiates `top`, generates clock/reset, and connects to `imem`.
-- **Clock/reset:** `CLK_PERIOD = 20 ns` (50 MHz). Reset asserted for the first **5** cycles, then de-asserted.
-- **Program load:** IMEM is a combinational ROM with optional `$readmemh` preload set **at elaboration** via the `MEMFILE` parameter. If `MEMFILE` is empty, a small hard-coded program is used.
-  ```systemverilog
-  // In tb_top.sv or top-level
-  imem #(
-    .DEPTH_WORDS(64),
-    .MEMFILE("sim/test_programs/final.hex")  // 32-bit words, ASCII hex
-  ) u_imem (
-    .addr(pc),   // byte address (PC)
-    .r_d(instr)  // 32-bit instruction
-  );
-- **Run control:** Testbench stops when the **expected store** is observed (e.g., `mem[0x00000064] = 32'd25`) and calls `$finish`; otherwise hits a **cycle limit** (e.g., `MAX_CYCLES = 10000`) and `$fatal("TIMEOUT")`.
-- **Checks/Assertions:** `x0` write-protect; no **X** after reset on key controls (`PCSrcE`, `FlushD`, `FlushE`, `MemWriteM`).
-- **Waveforms:** VCD via `$dumpfile("sim/waves/run.vcd"); $dumpvars(0, tb_top);` and/or an XSim `.wcfg` focused on forwarding, stalls, and flushes.
-- **Debug prints:** Under ``SIM``: regfile writebacks; `ForwardA/ForwardB`; `lwStall`; `FlushD/FlushE`; branch decisions.
-- **Pass criteria:** No **X** after reset; `x0 == 0` always; expected terminating store observed (and signature matches if signature mode is enabled).
-- **Typical runs:** **Vivado XSim (GUI):** Run All or `run 1000 ns`
-
+- **Entry:** `sim/tb_top.sv` (instantiates `top`, clock/reset, connects IMEM/DMEM)
+- **Clock/Reset:** `CLK_PERIOD = 20 ns` (50 MHz). Reset asserted ~22 ns then de-asserted.
+- **Program load:** IMEM is a LUT-ROM with `$readmemh` via the `MEMFILE` parameter. If empty, a small hard-coded bring-up program runs.
+- **Stop rule:** Testbench watches for a terminating store (e.g., `mem[0x00000064] = 32'd25`) → `$finish`; otherwise `$fatal("TIMEOUT")`.
+- **Checks & Asserts:** x0 write-protect; no **X** after reset on `PCSrcE`, `FlushD`, `FlushE`, `MemWriteM`; control encoding sanity.
+- **Debug:** `$display` traces for IF/ID/EX/MEM/WB and hazard unit under ``SIM``.
+- **Waveforms:** VCD via `$dumpfile/$dumpvars` or XSim `.wcfg` focused on forwarding, stalls, and flushes.
 
 ---
 
 ## 🛠️ FPGA (Basys3)
-- **Top wrapper:** `rtl/fpga_top.sv` (ports: `CLK100MHZ`, `rst_BTN`, `LED[15:0]`)
-- **LED mapping:** `{LED[15:8], LED[7:0]} = {ALUResultM[7:0], WriteDataM[7:0]}`; `LED[15] |= MemWriteM`
-- **Constraints:** `fpga/basys3.xdc` (W5: CLK100MHZ, U18: rst_BTN, LEDs U16…L1)
-- **Clocks:** Operates @ **50 MHz**; review critical path to reach **100 MHz**
-- **Mem init:** `$readmemh` path valid for synthesis (relative to project dir)
-- **Bring-up tips:** Confirm BRAM inference; ensure synchronous IMEM/DMEM; debounce reset if needed
+- **Top wrapper:** `rtl/fpga_top.sv`  
+  Ports: `CLK100MHZ` (W5), `rst_BTN` (U18), `LED[15:0]` (U16…L1).
+- **Clocking:** `clk_wiz_0` generates **50 MHz** from the board 100 MHz.  
+  *Tip:* In Vivado, **Generate Output Products** for the IP and add `fpga/ip/clk_wiz_0/clk_wiz_0.xci` to the project (and repo).
+- **LEDs:** `{LED[15:8], LED[7:0]} = {ALUResultM[7:0], WriteDataM[7:0]}`; `LED[15] |= MemWriteM` (blink on store).
+- **IMEM:** LUT-ROM (async) for bring-up. For higher Fmax or bigger images, switch to **BRAM/XPM** (sync, 1-cycle latency).
+- **DMEM:** **LUTRAM (64 words)** with **registered read**. To force BRAM later, increase depth and/or add `(* ram_style="block" *)`.
+- **Timing @50 MHz:** Met comfortably (see Results).  
+  **@100 MHz:** Work-in-progress; expect improvement with BRAM IMEM and minor path balancing.
 
 ---
 
 ## ✅ Verification
-- **Directed tests:** ALU/imm, branches (taken/not), lw/sw, hazards (fwdA/B, load-use)
-- **Assertions:** x0 write-protect; control encodings; `FlushD/E` on `PCSrcE/lwStall`
-- **Coverage (optional):** Line/Toggle/Branch/Functional `TODO:%` via simulator
-- **CPI measurement:** Hazard-free loop + mixed microbench; log cycles/instr `TODO`
-- **Pass/fail:** All directed tests pass; final store equals expected (e.g., mem[100]=25)
+- **Directed tests:** ALU/immediates, branches (taken/not), `lw/sw`, hazard paths (fwdA/B), load-use stall, branch/jump flush.
+- **Assertions:** x0 write-protect; valid control encodings; `FlushD = PCSrcE`; `FlushE = PCSrcE | lwStall`.
+- **Retirement:** Instruction “retires” at **WB** when `MEMWB_valid == 1`.
+- **CPI:**  
+  - **Raw:** `cycles / retired`  
+  - **Startup-adjusted:** `(cycles − 4) / retired` (subtract 4-cycle pipe fill)
+- **Pass/fail:** All directed tests pass; x0 always 0; no **X** after reset; terminating store observed and value matches.
 
 ---
 
 ## 📊 Results
-- **ISA subset:** RV32I core ops listed above
-- **CPI (hazard-free):** `TODO` (e.g., 1.00)
-- **CPI (mixed):** `TODO` (e.g., 1.15)
-- **Resources (Basys3):** LUT `TODO`, FF `TODO`, BRAM `TODO`
-- **Timing @50 MHz:** Met; slack `TODO ns`
-- **Timing @100 MHz:** `TODO` (met/fail, bottleneck path)
-- **Max Fmax:** `TODO MHz`
-- **Artifacts:** Waveforms (`docs/img/*.png`), bitstreams (`fpga/bitstreams/*.bit`)
+- **ISA subset:** RV32I (addi, R-type, `beq`, `lw/sw`, `jal`)
+
+**CPI**
+- *Hazard-free microbench:* `cycles = 17`, `retired = 13` → **CPI_raw = 1.3077**, **CPI_adj = 1.0000** ✅
+- *Mixed program:* `cycles = 25`, `retired = 16` → **CPI_raw = 1.5625**, **CPI_adj = 1.3125**
+
+**Utilization (Basys3, post-synthesis)**
+- **Slice LUTs:** **358** (≈ **278 logic + 80 LUTRAM**)
+- **Slice Registers:** **261**
+- **BRAM:** **0** (IMEM/DMEM are LUT-based at current sizes)
+- **DSP:** **0**
+- **IOBs:** **17**
+- **Clocking:** `clk_wiz_0` present (shows **MMCM/BUFG** once IP output products are generated; otherwise reported as a black box)
+
+**Timing**
+- **@50 MHz (20 ns):** Met, **WNS = +11.458 ns** (critical path ≈ **8.542 ns**)
+- **Max Fmax (≈ 1 / crit-path):** **~117 MHz**
+- **@100 MHz:** WIP (close with BRAM IMEM + minor path cleanup)
+
+**Artifacts**
+- Waveforms: `docs/img/*.png`  
+- Bitstreams: `fpga/bitstreams/*.bit`
 
 ---
 
 ## 📝 Design Notes
-- **Continuous `PCSrcE`:** Avoid `===` races by computing on wires, not in `always_comb`
-- **Forwarding order:** Prefer MEM result to minimize stalls; WB as secondary
-- **Load-use bubble:** One-cycle bubble inserted; store uses forwarded `RS2_fwd`
-- **Reset to NOP:** Prevents X-propagation into control; simplifies sim/FPGA parity
-- **Synchronous memories:** Match BRAM timing; avoid async sim-only reads
-- **SIM guards:** Keep `$display/$strobe` under ``ifdef SIM``; include `config.svh` in both sim & synth filesets
+- **Forwarding priority:** MEM > WB on both A/B paths (mux3: `10 / 01 / 00`).
+- **Load-use:** Single bubble; stores source RS2 via forwarded `RS2_fwd`.
+- **Flush policy:** `FlushD = PCSrcE`; `FlushE = PCSrcE | lwStall`.
+- **Reset hygiene:** IF/ID seeded with NOP (`ADDI x0,x0,0`); control bundles defaulted to safe values.
+- **Memory inference:** Use synchronous reads for BRAM parity; add `(* ram_style="block" *)` when growing memories.
+- **Comb vs procedural:** Prefer `assign` for `PCSrcE`/comparators; avoid `===` races in large `always_comb`.
 
 ---
 
-## 🐞 Debug Diary
-- **Taken branch executes next instr**
-  - **Cause:** Missing `FlushD` on `PCSrcE`
-  - **Fix:** `FlushD = PCSrcE`; squash IF/ID; insert bubble in ID/EX as needed
-  - **Proof:** Branch tests pass; no ghost writebacks
-- **Wrong value after `add x7,x4,x5`**
-  - **Cause:** `addi x5,0` not flushed; overwrote `x5=11` → `0`
-  - **Fix:** Correct flush timing; verify with forwarding traces
-  - **Proof:** RF logs show `x5=11` preserved; final result correct
-- **X-propagation toggles `PCSrcE`**
-  - **Cause:** `===` use inside comb logic with uninitialized signals
-  - **Fix:** Continuous assigns / precomputed wires; reset pipeline regs
-  - **Proof:** Stable sim/FPGA behavior
-- **Store→load mismatch on board**
-  - **Cause:** Async dmem in sim vs sync BRAM on FPGA
-  - **Fix:** Use synchronous read model
-  - **Proof:** Store/load tests now identical
+## 🐞 Debug Diary (highlights)
+- **Taken branch executed next instr** → Added `FlushD` on `PCSrcE` (squash IF/ID); verified no ghost WB.
+- **Reg clobber after `addi`** → Fixed flush timing; forwarding traces confirm correctness.
+- **Sim vs FPGA load timing mismatch** → Switched DMEM read to synchronous; parity restored.
 
 ---
 
 ## 🧭 Roadmap
-- **100 MHz close:** Balance EX/MEM paths; consider ALU cut or tighter placement
-- **ISA growth:** bne, lui/auipc, shifts, zero-extend loads
-- **Instr prefetch:** Simple queue to hide IMEM latency
-- **7-seg display:** Hex address/data for stores; activity indicator
-- **Automation:** CI for sim (lint, unit tests); coverage reports export
+- Close timing at **100 MHz** (BRAM IMEM, reduce fanout, minor placement/retiming).
+- ISA growth: `bne`, `lui/auipc`, shifts, zero-extend loads.
+- Simple prefetch queue to hide IMEM latency.
+- 7-seg HEX for `{addr,data}`; optional UART print.
+- CI for sim (lint, unit tests) and coverage export.
 
 ---
 
 ## 🧩 Troubleshooting
-- **Param override error (`WIDTH`):** Ensure `top` defines `parameter int WIDTH=32` or remove override
-- **`config.svh` ignored:** Add to both Simulation and Synthesis sets; check “Used in” column
-- **LEDs flicker:** Latch `{addr,data}` on clock; don’t drive LEDs directly from live bus
-- **Program not running:** Verify `$readmemh` path and IMEM depth; check reset polarity; inspect BRAM inference msgs
-- **X in waves:** Ensure IF/ID = NOP on reset; initialize control bundles; avoid `===` in critical comb logic
+- **Clock IP is “black box”:** Right-click `clk_wiz_0` → *Generate Output Products* → *Out-of-context per IP*. Ensure `fpga/ip/clk_wiz_0/clk_wiz_0.xci` is added to the project & repo.
+- **BRAM not inferred:** Use synchronous read, sufficient depth/width, optional `(* ram_style="block" *)`.
+- **LEDs flicker:** Latch outputs; avoid driving LEDs from live busses.
+- **Program doesn’t run:** Check `$readmemh` path/format, IMEM depth, reset polarity; scan synth messages for RAM inference.
+- **Xs after reset:** Seed IF/ID with NOP; initialize control bundles; avoid `===` in critical comb logic.
 
 ---
 
 ## 📄 License
-- **Type:** MIT  
-- **Files:** See `LICENSE`
+MIT — see `LICENSE`.
 
 ---
 
 ## 🤝 Credits
-- **Author:** `Kai Nguyen (kainct)`
-- **Board:** Digilent Basys3 (XC7A35T)
+- **Author:** Kai Nguyen (kainct)  
+- **Board:** Digilent Basys3 (XC7A35T)  
 - **Spec:** RISC-V RV32I
-- **Thanks:** `TODO: mentors/reviewers/tools`
+
 
 ---
 
