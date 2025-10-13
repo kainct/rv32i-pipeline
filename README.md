@@ -36,13 +36,12 @@
 
 ## Architecture
 - **Structure:** 5 stages — IF/ID/EX/MEM/WB with IF/ID, ID/EX, EX/MEM, MEM/WB regs
-- **Control path:** `PCSrcE = (Branch & Zero) | Jump` (continuous assign to avoid X timing)
 - **Immediate/types:** I/S/B/J via `ImmSrc`, sign-extended in Decode
 - **ALU ops:** add, sub, and, or, slt (+ immediate forms via alu_dec)
 - **Forwarding:** Priority MEM > WB on both A/B paths (mux3 with selects `10/01/00`)
 - **Stall/flush:** `lwStall` inserts bubble; `FlushD = PCSrcE`; `FlushE = PCSrcE | lwStall`
 - **Instruction memory:** Combinational ROM (LUT-based) with optional `$readmemh` preload via `MEMFILE` parameter; defaults to a small hard-coded program for bring-up
-- **Data memory:** **Synchronous, currently inferred as LUTRAM** (64 words) for small depth; BRAM-ready (switch to `(* ram_style="block" *)` and keep **registered read** when scaling)
+- **Data memory:** **Synchronous, currently inferred as LUTRAM** (64 words) for small depth
 - **Reset policy:** IF/ID seeded with NOP (`ADDI x0,x0,0`); all control lines zeroed
 
 ---
@@ -89,7 +88,7 @@ rv32i-pipeline/
 - **Clone:** `git clone https://github.com/kainct/rv32i-pipeline && cd rv32i-pipeline`
 - **Filesets (add to project):**
   - RTL: `rtl/*.sv`, `rtl/include/config.svh`, `rtl/fpga_top.sv`
-  - Constraints: `fpga/basys3.xdc`
+  - Constraints: `fpga/basys3/top.xdc`
   - **IP:** `fpga/ip/clk_wiz_0/clk_wiz_0.xci` (Clocking Wizard 100 MHz → 50 MHz)
 - **Program image:** `sim/final.hex`
 - **Defines:** in `config.svh`
