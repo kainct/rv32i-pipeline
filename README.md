@@ -43,6 +43,7 @@
 - **Instruction memory:** Combinational ROM (LUT-based) with optional `$readmemh` preload via `MEMFILE` parameter; defaults to a small hard-coded program for bring-up
 - **Data memory:** **Synchronous, currently inferred as LUTRAM** (64 words) for small depth
 - **Reset policy:** IF/ID seeded with NOP (`ADDI x0,x0,0`); all control lines zeroed
+- **Design lineage:** The 5-stage pipeline partitioning (IF/ID/EX/MEM/WB), control/hazard approach(lw-use stall, branch/jump flush), and many signal names follow the presentation in *Digital Design and Computer Architecture, RISC-V Edition* (Harris & Harris). This repository reimplemented the design in SystemVerilog and adapted it for Basys3.
 
 ---
 
@@ -74,10 +75,8 @@ rv32i-pipeline/
 │  ├─ ip/
 │  │  └─ clk_wiz_0/clk_wiz_0.xci       # Clocking Wizard (100 MHz → 50 MHz)
 │  ├─ bitstreams/                      # exported .bit files
-│  └─ mem/                             # BRAM inits for FPGA (optional)
-└─ scripts/
-   ├─ build_sim.tcl                    # optional Vivado sim script
-   └─ build_fpga.tcl                   # optional Vivado synth/impl script
+└─ └─ mem/                             # BRAM inits for FPGA (optional)
+ 
 
 ```
 
@@ -167,32 +166,49 @@ rv32i-pipeline/
 - **Forwarding priority:** MEM > WB on both A/B paths (mux3: `10 / 01 / 00`).
 - **Load-use:** Single bubble; stores source RS2 via forwarded `RS2_fwd`.
 - **Flush policy:** `FlushD = PCSrcE`; `FlushE = PCSrcE | lwStall`.
-- **Reset hygiene:** IF/ID seeded with NOP (`ADDI x0,x0,0`); control bundles defaulted to safe values.
-- **Memory inference:** Use synchronous reads for BRAM parity; add `(* ram_style="block" *)` when growing memories.
-- **Comb vs procedural:** Prefer `assign` for `PCSrcE`/comparators; avoid `===` races in large `always_comb`.
+- **Reset:** IF/ID seeded with NOP (`ADDI x0,x0,0`); control bundles defaulted to safe values.
 
 ---
 
 ## Debug Diary (highlights)
 - **Taken branch executed next instr** → Added `FlushD` on `PCSrcE` (squash IF/ID); verified no ghost WB.
 - **Reg clobber after `addi`** → Fixed flush timing; forwarding traces confirm correctness.
-- **Sim vs FPGA load timing mismatch** → Switched DMEM read to synchronous; parity restored.
+- 
+---
+
+## 🚀 Future Extensions (toward a HaDes-V–class project)
+
+### 1) Core completeness & ISA
+- Implement more RV32I ops (BNE/BGE*/BLT*, shifts, LUI/AUIPC).
+
+### 2) Privileged spec & traps
+- **Machine mode** CSRs and **trap/exception** handler (illegal instr, misalign, ecall).
+- **CLINT/mtime** for timer interrupts; simple **PLIC** for external IRQs.
+- Proper **reset/boot ROM**, trap vector, and minimal runtime.
+
+### 3) Memory system
+- Move IMEM/DMEM to **BRAM** by default; scale depths.
+- Add **I-cache/D-cache** (direct-mapped first; write-through + write buffer).
+- AXI-Lite/Wishbone **memory-mapped I/O** window.
+
+### 4) Bus & SoC integration
+- Replace direct mem ports with a **clean bus** (AXI-Lite or Wishbone).
+- On-FPGA peripherals: **UART**, **GPIO**, **SPI**, **I²C**, **timer**, **PWM**.
+
+### 5) Front-end performance
+- Deeper pipeline (6–7 stages) or **single-cycle BRAM fetch** with alignment unit.
+
+### 6) Performance targets
+- 50 MHz → **100+ MHz** on Basys3 with BRAM IMEM/DMEM.
+- **CPI < 1.2** on mixed workloads with predictor + store buffer.
+- Cacheable memory bandwidth and miss penalty characterization.
 
 ---
 
-## Roadmap
-- Close timing at **100 MHz** (BRAM IMEM, reduce fanout, minor placement/retiming).
-- ISA growth: `bne`, `lui/auipc`, shifts, zero-extend loads.
-- Simple prefetch queue to hide IMEM latency.
-- 7-seg HEX for `{addr,data}`; optional UART print.
-- CI for sim (lint, unit tests) and coverage export.
-
----
 
 ## Troubleshooting
 - **Clock IP is “black box”:** Right-click `clk_wiz_0` → *Generate Output Products* → *Out-of-context per IP*. Ensure `fpga/ip/clk_wiz_0/clk_wiz_0.xci` is added to the project & repo.
 - **BRAM not inferred:** Use synchronous read, sufficient depth/width, optional `(* ram_style="block" *)`.
-- **LEDs flicker:** Latch outputs; avoid driving LEDs from live busses.
 - **Program doesn’t run:** Check `$readmemh` path/format, IMEM depth, reset polarity; scan synth messages for RAM inference.
 - **Xs after reset:** Seed IF/ID with NOP; initialize control bundles; avoid `===` in critical comb logic.
 
