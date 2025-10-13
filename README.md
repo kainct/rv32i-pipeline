@@ -34,7 +34,7 @@
 
 ---
 
-## 🧩 Architecture
+## Architecture
 - **Structure:** 5 stages — IF/ID/EX/MEM/WB with IF/ID, ID/EX, EX/MEM, MEM/WB regs
 - **Control path:** `PCSrcE = (Branch & Zero) | Jump` (continuous assign to avoid X timing)
 - **Immediate/types:** I/S/B/J via `ImmSrc`, sign-extended in Decode
@@ -84,7 +84,7 @@ rv32i-pipeline/
 
 ---
 
-## ⚙️ Getting Started
+## Getting Started
 - **Tools:** Vivado 2022.1; Basys3 (XC7A35T)
 - **Clone:** `git clone https://github.com/kainct/rv32i-pipeline && cd rv32i-pipeline`
 - **Filesets (add to project):**
@@ -103,7 +103,7 @@ rv32i-pipeline/
 
 ---
 
-## 🧪 Simulation
+## Simulation
 - **Entry:** `sim/tb_top.sv` (instantiates `top`, clock/reset, connects IMEM/DMEM)
 - **Clock/Reset:** `CLK_PERIOD = 20 ns` (50 MHz). Reset asserted ~22 ns then de-asserted.
 - **Program load:** IMEM is a LUT-ROM with `$readmemh` via the `MEMFILE` parameter. If empty, a small hard-coded bring-up program runs.
@@ -114,7 +114,7 @@ rv32i-pipeline/
 
 ---
 
-## 🛠️ FPGA (Basys3)
+## FPGA (Basys3)
 - **Top wrapper:** `rtl/fpga_top.sv`  
   Ports: `CLK100MHZ` (W5), `rst_BTN` (U18), `LED[15:0]` (U16…L1).
 - **Clocking:** `clk_wiz_0` generates **50 MHz** from the board 100 MHz.  
@@ -127,7 +127,7 @@ rv32i-pipeline/
 
 ---
 
-## ✅ Verification
+## Verification
 - **Directed tests:** ALU/immediates, branches (taken/not), `lw/sw`, hazard paths (fwdA/B), load-use stall, branch/jump flush.
 - **Assertions:** x0 write-protect; valid control encodings; `FlushD = PCSrcE`; `FlushE = PCSrcE | lwStall`.
 - **Retirement:** Instruction “retires” at **WB** when `MEMWB_valid == 1`.
@@ -138,7 +138,7 @@ rv32i-pipeline/
 
 ---
 
-## 📊 Results
+## Results
 - **ISA subset:** RV32I (addi, R-type, `beq`, `lw/sw`, `jal`)
 
 **CPI**
@@ -164,7 +164,7 @@ rv32i-pipeline/
 
 ---
 
-## 📝 Design Notes
+## Design Notes
 - **Forwarding priority:** MEM > WB on both A/B paths (mux3: `10 / 01 / 00`).
 - **Load-use:** Single bubble; stores source RS2 via forwarded `RS2_fwd`.
 - **Flush policy:** `FlushD = PCSrcE`; `FlushE = PCSrcE | lwStall`.
@@ -174,14 +174,14 @@ rv32i-pipeline/
 
 ---
 
-## 🐞 Debug Diary (highlights)
+## Debug Diary (highlights)
 - **Taken branch executed next instr** → Added `FlushD` on `PCSrcE` (squash IF/ID); verified no ghost WB.
 - **Reg clobber after `addi`** → Fixed flush timing; forwarding traces confirm correctness.
 - **Sim vs FPGA load timing mismatch** → Switched DMEM read to synchronous; parity restored.
 
 ---
 
-## 🧭 Roadmap
+## Roadmap
 - Close timing at **100 MHz** (BRAM IMEM, reduce fanout, minor placement/retiming).
 - ISA growth: `bne`, `lui/auipc`, shifts, zero-extend loads.
 - Simple prefetch queue to hide IMEM latency.
@@ -190,7 +190,7 @@ rv32i-pipeline/
 
 ---
 
-## 🧩 Troubleshooting
+## Troubleshooting
 - **Clock IP is “black box”:** Right-click `clk_wiz_0` → *Generate Output Products* → *Out-of-context per IP*. Ensure `fpga/ip/clk_wiz_0/clk_wiz_0.xci` is added to the project & repo.
 - **BRAM not inferred:** Use synchronous read, sufficient depth/width, optional `(* ram_style="block" *)`.
 - **LEDs flicker:** Latch outputs; avoid driving LEDs from live busses.
@@ -199,12 +199,12 @@ rv32i-pipeline/
 
 ---
 
-## 📄 License
+## License
 MIT — see `LICENSE`.
 
 ---
 
-## 🤝 Credits
+## Credits
 - **Author:** Kai Nguyen (kainct)  
 - **Board:** Digilent Basys3 (XC7A35T)  
 - **Spec:** RISC-V RV32I
