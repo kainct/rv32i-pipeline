@@ -75,7 +75,7 @@ rv32i-pipeline/
 │  ├─ ip/
 │  │  └─ clk_wiz_0/clk_wiz_0.xci       # Clocking Wizard (100 MHz → 50 MHz)
 │  ├─ bitstreams/                      # exported .bit files
-└─ └─ mem/                             # BRAM inits for FPGA (optional)
+└─ └─ mem/                             # BRAM inits for FPGA
  
 
 ```
