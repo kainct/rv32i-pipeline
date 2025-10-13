@@ -223,7 +223,7 @@ MIT — see `LICENSE`.
 - **Author:** Kai Nguyen (kainct)  
 - **Board:** Digilent Basys3 (XC7A35T)  
 - **Spec:** RISC-V RV32I
-
+- **Acknowledgments:** Harris & Harris, *Digital Design and Computer Architecture, RISC-V Edition*, for the pipeline organization and hazard/control reference.
 
 ---
 
