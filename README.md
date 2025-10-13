@@ -52,13 +52,9 @@
 ```text
 rv32i-pipeline/
 ├─ README.md
-├─ LICENSE                             # TODO: add if you choose a license
+├─ LICENSE                             
 ├─ docs/
-│  ├─ design.md                        # micro-arch & interfaces
-│  ├─ verification.md                  # TB strategy, coverage, pass/fail
-│  ├─ fpga.md                          # board bring-up notes
-│  ├─ bringup_diary.md                 # short dated entries
-│  └─ postmortem.md                    # what to improve next
+│  └─ reflection.md                    # what to improve next
 ├─ rtl/
 │  ├─ *.sv                             # core RTL (pkg, decode, execute, hazard, ...)
 │  ├─ riscv_pkg.sv                     # RISC-V constants + decode/ALU enums + control/pipe bundle typedefs 
@@ -68,14 +64,11 @@ rv32i-pipeline/
 ├─ sim/
 │  ├─ tb_top.sv                        # testbench
 │  ├─ final.hex                        # program image
-│  ├─ *.sv                             # testbenches for modules                     
-│  └─ waves/                           # .wcfg /.vcd dumps
+│  └─ *.sv                             # testbenches for modules                    
 ├─ fpga/
 │  ├─ basys3.xdc                       # pin constraints
 │  ├─ ip/
-│  │  └─ clk_wiz_0/clk_wiz_0.xci       # Clocking Wizard (100 MHz → 50 MHz)
-│  ├─ bitstreams/                      # exported .bit files
-└─ └─ mem/                             # BRAM inits for FPGA
+│  └─  └─ clk_wiz_0/clk_wiz_0.xci      # Clocking Wizard (100 MHz → 50 MHz)
  
 
 ```
