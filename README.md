@@ -43,7 +43,7 @@
 - **Instruction memory:** Combinational ROM (LUT-based) with optional `$readmemh` preload via `MEMFILE` parameter; defaults to a small hard-coded program for bring-up
 - **Data memory:** **Synchronous, currently inferred as LUTRAM** (64 words) for small depth
 - **Reset policy:** IF/ID seeded with NOP (`ADDI x0,x0,0`); all control lines zeroed
-- **Design lineage:** The 5-stage pipeline partitioning (IF/ID/EX/MEM/WB), control/hazard approach(lw-use stall, branch/jump flush), and many signal names follow the presentation in *Digital Design and Computer Architecture, RISC-V Edition* (Harris & Harris). This repository reimplemented the design in SystemVerilog and adapted it for Basys3.
+- **Design lineage:** The 5-stage pipeline partitioning (IF/ID/EX/MEM/WB), control/hazard approach (lw-use stall, branch/jump flush), and many signal names follow the presentation in *Digital Design and Computer Architecture, RISC-V Edition* (Harris & Harris). This repository reimplemented the design in SystemVerilog and adapted it for Basys3.
 
 ---
 
