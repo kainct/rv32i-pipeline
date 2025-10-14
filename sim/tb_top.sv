@@ -48,7 +48,7 @@ module tb_top();
     
     
     /*
-    // Pass/fail on final store
+    // NO HAZARD TESTBENCH
     always @(negedge clk) begin
         if (MemWriteM) begin
             if ((ALUResultM === 32'd96) && (WriteDataM === 32'd25)) begin
