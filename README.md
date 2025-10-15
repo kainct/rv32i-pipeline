@@ -61,14 +61,15 @@ rv32i-pipeline/
 │  ├─ include
 │  │  └─ config.svh                    # `define SIM` for sim-only prints
 │  └─ fpga_top.sv                      # LEDs wrapper for Basys3
+├─ scripts/
+│  └─ build_fpga.tcl                   # Run FPGA  
 ├─ sim/
 │  ├─ tb_top.sv                        # testbench
 │  ├─ final.hex                        # program image
 │  └─ *.sv                             # testbenches for modules                    
-├─ fpga/
-│  ├─ basys3.xdc                       # pin constraints
-│  ├─ ip/
-│  └─  └─ clk_wiz_0/clk_wiz_0.xci      # Clocking Wizard (100 MHz → 50 MHz)
+├─ fpga/basys3
+│  ├─ top.xdc                          # pin constraints
+│  └─ clk_wiz_0/clk_wiz_0.xci          # Clocking Wizard (100 MHz → 50 MHz)
  
 
 ```
