@@ -65,10 +65,9 @@ rv32i-pipeline/
 │  ├─ tb_top.sv                        # testbench
 │  ├─ final.hex                        # program image
 │  └─ *.sv                             # testbenches for modules                    
-├─ fpga/
-│  ├─ basys3.xdc                       # pin constraints
-│  ├─ ip/
-│  └─  └─ clk_wiz_0/clk_wiz_0.xci      # Clocking Wizard (100 MHz → 50 MHz)
+├─ fpga/basys3
+│  ├─ top.xdc                          # pin constraints
+│  └─ clk_wiz_0/clk_wiz_0.xci          # Clocking Wizard (100 MHz → 50 MHz)
  
 
 ```
