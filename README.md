@@ -61,6 +61,8 @@ rv32i-pipeline/
 │  ├─ include
 │  │  └─ config.svh                    # `define SIM` for sim-only prints
 │  └─ fpga_top.sv                      # LEDs wrapper for Basys3
+├─ scripts/
+│  └─ build_fpga.tcl                   # Run FPGA  
 ├─ sim/
 │  ├─ tb_top.sv                        # testbench
 │  ├─ final.hex                        # program image
