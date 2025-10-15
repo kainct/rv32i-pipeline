@@ -179,7 +179,7 @@ rv32i-pipeline/
 - 
 ---
 
-## Future Extensions (toward a HaDes-V–class project)
+## Future Extensions
 
 ### 1) Core completeness & ISA
 - Implement more RV32I ops (BNE/BGE*/BLT*, shifts, LUI/AUIPC).
