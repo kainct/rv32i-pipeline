@@ -70,7 +70,7 @@
 proc checkRequiredFiles { origin_dir} {
   set status true
   set files [list \
- "[file normalize "$origin_dir/../../riscv_pipelined/riscv_pipelined.srcs/sources_1/ip/clk_wiz_0/clk_wiz_0.xci"]"\
+ "[file normalize "$origin_dir/../fpga/basys3/clk_wiz_0/clk_wiz_0.xci"]"\
   ]
   foreach ifile $files {
     if { ![file isfile $ifile] } {
@@ -271,11 +271,14 @@ set files [list \
 ]
 add_files -norecurse -fileset $obj $files
 
+# Make sure Verilog headers in rtl/include are found
+set_property include_dirs [list "$origin_dir/../rtl/include"] [get_filesets sources_1]
+
 # Add local files from the original project (-no_copy_sources specified)
 set files [list \
- [file normalize "${origin_dir}/../../riscv_pipelined/riscv_pipelined.srcs/sources_1/ip/clk_wiz_0/clk_wiz_0.xci" ]\
+ [file normalize "$origin_dir/../fpga/basys3/clk_wiz_0/clk_wiz_0.xci"]\
 ]
-set added_files [add_files -fileset sources_1 $files]
+set added_files [add_files -norecurse -fileset sources_1 $files]
 
 # Set 'sources_1' fileset file properties for remote files
 set file "$origin_dir/../rtl/riscv_pkg.sv"
@@ -414,15 +417,19 @@ set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
 set_property -name "file_type" -value "SystemVerilog" -objects $file_obj
 
 
-# Set 'sources_1' fileset file properties for local files
-set file "clk_wiz_0/clk_wiz_0.xci"
-set file_obj [get_files -of_objects [get_filesets sources_1] [list "*$file"]]
-set_property -name "generate_files_for_reference" -value "0" -objects $file_obj
-set_property -name "registered_with_manager" -value "1" -objects $file_obj
-if { ![get_property "is_locked" $file_obj] } {
-  set_property -name "synth_checkpoint_mode" -value "Singular" -objects $file_obj
-}
 
+# Set 'sources_1' fileset file properties for local IP and generate targets
+set ip_xci  [file normalize "$origin_dir/../fpga/basys3/clk_wiz_0/clk_wiz_0.xci"]
+set file_obj [get_files -of_objects [get_filesets sources_1] [list $ip_xci]]
+# Fallback in case Vivado canonicalizes the path differently
+if { [llength $file_obj] == 0 } {
+  set file_obj [get_files -of_objects [get_filesets sources_1] *clk_wiz_0*.xci]
+}
+# Generate all IP outputs so a clean machine can build
+if { [llength $file_obj] > 0 } {
+  generate_target all $file_obj
+  export_ip_user_files -of_objects $file_obj -no_script -sync -force -quiet
+}
 
 # Set 'sources_1' fileset properties
 set obj [get_filesets sources_1]
@@ -466,6 +473,9 @@ set files [list \
  [file normalize "${origin_dir}/../sim/tb_main_dec.sv"] \
 ]
 add_files -norecurse -fileset $obj $files
+
+# Make sure headers are found during simulation as well
+set_property include_dirs [list "$origin_dir/../rtl/include"] [get_filesets sim_1]
 
 # Set 'sim_1' fileset file properties for remote files
 set file "$origin_dir/../sim/tb_top.sv"
