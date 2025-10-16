@@ -174,8 +174,8 @@ rv32i-pipeline/
 ---
 
 ## Debug Diary (highlights)
-- **Taken branch executed next instr** → Added `FlushD` on `PCSrcE` (squash IF/ID); verified no ghost WB.
-- **Reg clobber after `addi`** → Fixed flush timing; forwarding traces confirm correctness.
+- **Ghost instr after taken branch** → Missing IF/ID flush and branch gate used `===` (masked `X`). **Fix**: pure combinational redirect; `FlushD = PCSrcE; FlushE = PCSrcE | lwStall;` and ID/EX inserts NOP. **Result**: no spurious WB.
+- **Reg clobber after `addi`** → Mistimed flush let a stray instr advance; forwarding couldn’t hide it. **Fix**: corrected flush timing, enforce MEM > WB priority, add explicit `lwStall`. **Result**: one-cycle bubble then correct operands at EX.
 ---
 
 ## Future Extensions
