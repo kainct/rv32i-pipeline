@@ -122,9 +122,9 @@ assign lwStall = (ResultSrcE_b0 === 1'b1) && (RdE != 5'd0) && ((Rs1D == RdE) || 
 
 ## Thanks
 
+- **Your Mentor’s Name** (Internship mentor, **Company/Lab**), for guidance on timing closure, RTL hygiene, and “sim ≠ FPGA” realities.
+- **David Harris & Sarah Harris**, for Digital Design and Computer Architecture, RISC-V Edition — the pipeline split, hazard approach, and many signal names follow their presentation.
 - Folks who publish open **RV32I** references and **Basys3 XDCs**.
-- Everyone who documents the “**sim ≠ FPGA**” memory-timing gotchas.
-- **Future me**, for writing this down.
 
 
 
