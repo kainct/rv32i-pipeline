@@ -176,7 +176,6 @@ rv32i-pipeline/
 ## Debug Diary (highlights)
 - **Taken branch executed next instr** → Added `FlushD` on `PCSrcE` (squash IF/ID); verified no ghost WB.
 - **Reg clobber after `addi`** → Fixed flush timing; forwarding traces confirm correctness.
-- 
 ---
 
 ## Future Extensions
