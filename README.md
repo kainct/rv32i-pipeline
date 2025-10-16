@@ -119,6 +119,71 @@ rv32i-pipeline/
 
 ---
 
+## Test Program (Assembly ↔ Machine Code)
+
+This is the program loaded into `sim/final.hex`. The PC shown in waveforms
+(**PCF**) should match the **Address** column below as the
+instruction flows IF→ID→EX→MEM→WB.
+
+| Label  | RISC-V Assembly          | Description                     | Address | Machine Code |
+|:------:|--------------------------|---------------------------------|:-------:|:------------:|
+| main   | addi x2, x0, 5           | initialize x2 = 5               | 0x00    | 00500113     |
+|        | addi x3, x0, 12          | initialize x3 = 12              | 0x04    | 00C00193     |
+|        | addi x7, x3, -9          | initialize x7 = 3               | 0x08    | FF718393     |
+|        | or   x4, x7, x2          | x4 = (3 OR 5) = 7               | 0x0C    | 0023E233     |
+|        | and  x5, x3, x4          | x5 = (12 AND 7) = 4             | 0x10    | 0041F2B3     |
+|        | add  x5, x5, x4          | x5 = 4 + 7 = 11                 | 0x14    | 004282B3     |
+|        | beq  x5, x7, end         | not taken                       | 0x18    | 02728863     |
+|        | slt  x4, x3, x4          | x4 = (12 < 7) = 0               | 0x1C    | 0041A233     |
+|        | beq  x4, x0, around      | taken                           | 0x20    | 00020463     |
+|        | addi x5, x0, 0           | shouldn't execute               | 0x24    | 00000293     |
+| around | slt  x4, x7, x2          | x4 = (3 < 5) = 1                | 0x28    | 0023A233     |
+|        | add  x7, x4, x5          | x7 = 1 + 11 = 12                | 0x2C    | 005203B3     |
+|        | sub  x7, x7, x2          | x7 = 12 − 5 = 7                 | 0x30    | 402383B3     |
+|        | sw   x7, 84(x3)          | mem[96] = 7                     | 0x34    | 0471AA23     |
+|        | lw   x2, 96(x0)          | x2 = mem[96] = 7                | 0x38    | 06002103     |
+|        | add  x9, x2, x5          | x9 = 7 + 11 = 18                | 0x3C    | 005104B3     |
+|        | jal  x3, end             | jump; x3 = 0x44                 | 0x40    | 008001EF     |
+|        | addi x2, x0, 1           | shouldn't execute               | 0x44    | 00100113     |
+| end    | add  x2, x2, x9          | x2 = 7 + 18 = 25                | 0x48    | 00910133     |
+|        | sw   x2, 0x20(x3)        | mem[100] = 25                   | 0x50    | 0221A023     |
+| done   | beq  x2, x2, done        | infinite loop                   | 0x54    | 00210063     |
+
+**Correlating waves to code**
+- **IF stage:** `PCF` = Address, `InstrF` = Machine Code at that address.
+- **Memory ops:** At store, watch `ALUResultM` (addr) and `WriteDataM` (data); LEDs mirror the low bytes on hardware.
+- The terminating condition in `tb_top.sv` matches the `sw` to `mem[100] = 25`.
+
+**Files**
+- Hex image: `sim/final.hex`
+
+## Waveform Snapshots
+
+### 0 ns → 150 ns
+![waves-0-150ns](docs/img/waves/pipeline_0to150ns.png)
+
+- PCs: `0x00 → 0x04 → 0x08 → 0x0C → 0x10 → 0x14 → 0x18 → 0x1C → 0x20 → 0x24 → 0x28 → 0x2C → 0x30`
+- Highlights:
+  - Register inits: `addi x2=5`, `addi x3=12`, `addi x7=3`
+  - Logic ops: `or x4=7`, `and x5=4`, `add x5=11`
+  - **Branch @0x18 not taken**, **branch @0x20 taken** (`FlushD/FlushE` visible as IF/ID squash + EX bubble)
+  - Forwarding engages on back-to-back ALU deps (`ForwardAE/BE` toggle; MEM>WB priority)
+
+### 150 ns → end
+![waves-150ns-plus](docs/img/waves/pipeline_150ns_plus.png)
+
+- PCs: continue through `0x28, 0x2C, 0x30, 0x34, 0x38, 0x3C, 0x40, 0x48, 0x50, 0x54`
+- Highlights:
+  - `slt x4=1`, `add x7=12`, `sub x7=7`
+  - Store/load window: `sw x7, 84(x3)` then `lw x2, 96(x0)` (watch `MemWriteM` pulse)
+  - Final math: `add x2, x2, x9` → **25**
+  - **End condition:** `sw x2, 0x20(x3)` writes **25** to `mem[100]`
+
+> **Signals shown (recommended):** `PCF[31:0]`, `InstrF[31:0]`, `ALUResultM[31:0]`, `WriteDataM[31:0]`, `ResultW[31:0]`, `FlushD`, `FlushE`, `ForwardAE[1:0]`, `ForwardBE[1:0]`, `MemWriteM`, `retire_valid`, `cycle_cnt`, and `instr_cnt`.
+
+
+---
+
 ## FPGA (Basys3)
 - **Top wrapper:** `rtl/fpga_top.sv`  
   Ports: `CLK100MHZ` (W5), `rst_BTN` (U18), `LED[15:0]` (U16…L1).
