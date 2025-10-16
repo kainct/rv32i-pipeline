@@ -82,7 +82,7 @@ rv32i-pipeline/
 - **Filesets (add to project):**
   - RTL: `rtl/*.sv`, `rtl/include/config.svh`, `rtl/fpga_top.sv`
   - Constraints: `fpga/basys3/top.xdc`
-  - **IP:** `fpga/ip/clk_wiz_0/clk_wiz_0.xci` (Clocking Wizard 100 MHz → 50 MHz)
+  - **IP:** `fpga/basys3/clk_wiz_0/clk_wiz_0.xci` (Clocking Wizard 100 MHz → 50 MHz)
 - **Program image:** `sim/final.hex`
 - **Defines:** in `config.svh`
   ```systemverilog
@@ -92,6 +92,19 @@ rv32i-pipeline/
     ```
 - **Build (sim):** Vivado GUI → Flow Navigator → Simulation
 - **Build (fpga):** Vivado GUI → Flow Navigator → Synthesis → Implementation → Bitstream → Program device
+- **Build via Tcl:**
+  Prereqs: Vivado **2022.1** (Basys3 board files installed).
+
+  From repo root:
+  ```bash
+  # Creates ./riscv_pipelined project and adds sources/constraints/IP
+  vivado -mode batch -source scripts/build_fpga.tcl -tclargs --origin_dir ./scripts
+  ```
+
+  From scripts/:
+  ```bash
+  vivado -mode batch -source build_fpga.tcl
+  ```
 
 ---
 
@@ -110,7 +123,7 @@ rv32i-pipeline/
 - **Top wrapper:** `rtl/fpga_top.sv`  
   Ports: `CLK100MHZ` (W5), `rst_BTN` (U18), `LED[15:0]` (U16…L1).
 - **Clocking:** `clk_wiz_0` generates **50 MHz** from the board 100 MHz.  
-  *Tip:* In Vivado, **Generate Output Products** for the IP and add `fpga/ip/clk_wiz_0/clk_wiz_0.xci` to the project (and repo).
+  *Tip:* In Vivado, **Generate Output Products** for the IP and add `fpga/basys3/clk_wiz_0/clk_wiz_0.xci` to the project (and repo).
 - **LEDs:** `{LED[15:8], LED[7:0]} = {ALUResultM[7:0], WriteDataM[7:0]}`; `LED[15] |= MemWriteM` (blink on store).
 - **IMEM:** LUT-ROM (async) for bring-up. For higher Fmax or bigger images, switch to **BRAM/XPM** (sync, 1-cycle latency).
 - **DMEM:** **LUTRAM (64 words)** with **registered read**. To force BRAM later, increase depth and/or add `(* ram_style="block" *)`.
@@ -150,10 +163,6 @@ rv32i-pipeline/
 - **Max Fmax (≈ 1 / crit-path):** **~117 MHz**
 - **@100 MHz:** WIP (close with BRAM IMEM + minor path cleanup)
 
-**Artifacts**
-- Waveforms: `docs/img/*.png`  
-- Bitstreams: `fpga/bitstreams/*.bit`
-
 ---
 
 ## Design Notes
@@ -165,12 +174,11 @@ rv32i-pipeline/
 ---
 
 ## Debug Diary (highlights)
-- **Taken branch executed next instr** → Added `FlushD` on `PCSrcE` (squash IF/ID); verified no ghost WB.
-- **Reg clobber after `addi`** → Fixed flush timing; forwarding traces confirm correctness.
-- 
+- **Ghost instr after taken branch** → Missing IF/ID flush. **Fix**: pure combinational redirect; `FlushD = take_branch; FlushE = take_branch | lwStall;` and ID/EX inserts NOP. **Result**: no spurious WB.
+- **Reg clobber after `addi`** → Mistimed flush let a stray instr advance; forwarding couldn’t hide it. **Fix**: corrected flush timing, enforce MEM > WB priority, add explicit `lwStall`. **Result**: one-cycle bubble then correct operands at EX.
 ---
 
-## Future Extensions (toward a HaDes-V–class project)
+## Future Extensions
 
 ### 1) Core completeness & ISA
 - Implement more RV32I ops (BNE/BGE*/BLT*, shifts, LUI/AUIPC).
@@ -201,7 +209,7 @@ rv32i-pipeline/
 
 
 ## Troubleshooting
-- **Clock IP is “black box”:** Right-click `clk_wiz_0` → *Generate Output Products* → *Out-of-context per IP*. Ensure `fpga/ip/clk_wiz_0/clk_wiz_0.xci` is added to the project & repo.
+- **Clock IP is “black box”:** Right-click `clk_wiz_0` → *Generate Output Products* → *Out-of-context per IP*. Ensure `fpga/basys3/clk_wiz_0/clk_wiz_0.xci` is added to the project & repo.
 - **BRAM not inferred:** Use synchronous read, sufficient depth/width, optional `(* ram_style="block" *)`.
 - **Program doesn’t run:** Check `$readmemh` path/format, IMEM depth, reset polarity; scan synth messages for RAM inference.
 - **Xs after reset:** Seed IF/ID with NOP; initialize control bundles; avoid `===` in critical comb logic.
