@@ -42,52 +42,39 @@ I wanted a hands-on understanding of CPU microarchitecture beyond lectures:
 ## Major Challenges & Fixes
 
 ### 1) “Ghost instruction” after taken branches
-- **Symptom:** Next instruction after a taken `beq` still executed (e.g., `addi x5,0` clobbered `x5=11`).
-- **Cause:** IF/ID not flushed on `PCSrcE` → stale instruction slipped through.
-- **Fix:** `FlushD = PCSrcE; FlushE = PCSrcE | lwStall;` ensure bubble in ID/EX when redirecting PC.
-- **Proof:** RF logs show no spurious writeback; final state matches golden.
 
-### 2) PCSrcE race due to X-propagation
-- **Symptom:** Pass/fail depended on how PCSrcE was computed; `===` comparisons caused timing dependency.
-- **Cause:** Used `=== 1'b1` inside mixed comb logic; uninitialized signals temporarily X.
-- **Fix:** Move to **continuous wires**:
-  ```systemverilog
-  assign PCSrcE = (ctrl_e.Branch & ZeroE) | ctrl_e.Jump; ```
-  or precompute `branch_taken`, `jump_taken` on wires and OR them.
-- **Proof:** Stable behavior across runs; no X-driven flushes.
+- **Symptom:** The instruction after a taken `beq` still executed (e.g., `addi x5,0` clobbered `x5=11`).
+- **Cause:**  
+  - **Flush wasn’t armed**: `IF/ID` wasn’t flushed on a PC redirect.  
+  - **X-masking bug:** I incorrectly gated the flush with  
+    ```systemverilog
+    // BAD: treats unknown as not-taken and can race
+    wire take_branch = (PCSrcE === 1'b1);
+    ```  
+    During the brief X-propagation window, `PCSrcE` was `X`, so `take_branch` evaluated to `0` and the stale instruction slipped through.
+- **Fix:**  
+  - Compute branch/jump decision as a pure combinational **wire** (no `===`):  
+    ```systemverilog
+    logic  take_branch;
+    assign take_branch = (PCSrcE === 1'b1);
+    ```  
+  - Flush on redirect and bubble EX when needed:  
+    ```systemverilog
+    assign FlushD = take_branch;
+    assign FlushE = take_branch | lwStall;
+    ```  
+  - Ensure the ID/EX register inserts a NOP on `FlushE`.
+- **Proof:** Regfile logs show no spurious writeback; final architectural state matches the golden result.
 
-### 3) Forwarding correctness vs. load-use stalls
+
+### 2) Forwarding correctness vs. load-use stalls
 
 **Symptom:** Wrong operand **B** for `add x7, x4, x5` when the preceding instruction overwrote `x5`.  
-**Cause:** Branch flush timing allowed an `addi x5, 0` to survive one stage; forwarding alone couldn’t fix the logic hazard.  
+**Cause:** Branch flush timing allowed an `addi x5, x0, 0` to survive one stage; forwarding alone couldn’t fix the logic hazard.  
 **Fix:** Corrected flush timing; verified forwarding priority **MEM > WB**; added `lwStall` bubble:
 
 ```systemverilog
-lwStall = load_in_EX && (RdE != 5'd0) && ((RdE == Rs1D) || (RdE == Rs2D));
-```
-
-### 4) Simulation ≠ FPGA (memory timing)
-
-**Symptom:** Store→load sequences behaved differently on board vs. sim.  
-**Cause:** Sim model used **asynchronous** reads; FPGA BRAM is **synchronous**.  
-**Fix:** Switched IMEM/DMEM to **synchronous** models to match BRAM behavior.
-
-### 5) Tooling friction: `ifdef` and filesets
-
-**Symptom:** `$display` either missing in sim or leaked into synth; sometimes `SIM` macro ignored.  
-**Cause:** `config.svh` not included in **both** *Simulation* and *Synthesis* filesets.  
-**Fix:** Central header:
-
-```systemverilog
-`ifndef SYNTHESIS
-  `define SIM
-`endif
-```
-...add this header to both filesets in Vivado. Wrap prints:
-```systemverilog
-`ifndef SYNTHESIS
-  `define SIM
-`endif
+assign lwStall = (ResultSrcE_b0 === 1'b1) && (RdE != 5'd0) && ((Rs1D == RdE) || (Rs2D == RdE));
 ```
 
 ---
@@ -96,7 +83,7 @@ lwStall = load_in_EX && (RdE != 5'd0) && ((RdE == Rs1D) || (RdE == Rs2D));
 
 - **Stage-scoped prints:** One-line “EX/MEM/WB snapshot” per cycle — especially `ForwardA/ForwardB` selects and `RS2_fwd`.
 - **PC/flush tracing:** Log `PCF`, `instrD.pc`, `PCTargetE`, and `PCSrcE` together to see redirects and squashes.
-- **X hygiene:** Reset pipeline regs to known values (NOP); avoid `===` in timing-critical combinational logic.
+- **X hygiene:** Reset pipeline regs to known values (NOP).
 - **Small directed programs:** A ~20-instruction test that touches every hazard path.
 - **LED latch (FPGA):** Latch `{ALUResultM[7:0], WriteDataM[7:0]}` on writes to avoid flicker and make stores human-readable.
 
@@ -105,18 +92,16 @@ lwStall = load_in_EX && (RdE != 5'd0) && ((RdE == Rs1D) || (RdE == Rs2D));
 ## What I Learned
 
 ### Microarchitecture
-- **Forwarding** fixes many hazards, but **not** load-use — you need a **bubble**.
-- **Branching** has two parts: decision timing **and** the mechanics of squashing.
-- **X-safety is a feature:** initialize everything; prefer **wires** for critical decisions.
+- **Forwarding** fixes many hazards, but **not** load-use — you need to **stall**.
+- **X-safety is a feature:** initialize everything.
 
 ### Verification
 - **Directed tests** are cheap and effective — one per hazard is gold.
 - Make the TB **self-identifying:** prints that read like a pipeline trace.
-- Keep sim models **realistic** (synchronous memories) to avoid board surprises.
-
+  
 ### Tooling / Project Hygiene
 - Gate sim-only code (`$display`, assertions) behind a single **`SIM` macro**.
-- Ensure headers (`config.svh`) are in **both** filesets — Vivado doesn’t guess.
+- Ensure headers (`config.svh`) are in **both** filesets.
 - Keep constraints readable; **name top-level ports** to match the XDC.
 - Good docs pay off — a clear **README** shortens future bring-up time.
 
@@ -124,40 +109,14 @@ lwStall = load_in_EX && (RdE != 5'd0) && ((RdE == Rs1D) || (RdE == Rs2D));
 
 ## What I’d Do Differently Next Time
 
-- Add **assertions early** (x0 write-protect, one-hot control, valid opcodes).
 - Build a tiny **scoreboard** or **golden-signature** check for the test program.
 - **Script** Vivado builds (Tcl) and add **CI** to run smoke simulations on commits.
-- Consider a simple **prefetch buffer** to hide IMEM latency and improve CPI.
-
 ---
 
 ## Outcome & Next Steps
 
-- **Outcome:** RV32I 5-stage pipeline running on **Basys3 @ 50 MHz**, correct hazard handling, and visible store activity on LEDs.  
-- **Next:** Close **100 MHz** timing (analyze EX/MEM critical paths), expand ISA (bne, shifts), add **7-seg** display for `{addr,data}`, and publish **coverage numbers**.
-
----
-
-## Selected Snippets (for future me)
-
-**PC redirect (X-safe):**
-```systemverilog
-assign PCSrcE = (ctrl_e.Branch & ZeroE) | ctrl_e.Jump;
-```
-**PC redirect (X-safe):**
-```systemverilog
-assign lwStall = ResultSrcE_b0
-              && (RdE != 5'd0)
-              && ((RdE == Rs1D) || (RdE == Rs2D));
-```
-**Forwarding priority:**
-```systemverilog
-// prefer MEM (10) over WB (01)
-```
-**IF/ID reset to NOP:**
-```systemverilog
-localparam logic [31:0] INSTR_NOP = 32'h0000_0013; // ADDI x0,x0,0
-```
+- **Outcome:** RV32I 5-stage pipeline running on **Basys3 @ 50 MHz**, hazards handled (forwarding + load-use stall + branch/jump flush), and store activity visible on LEDs. Reproducible FPGA build via `scripts/build_fpga.tcl`.
+- **Next:** Close **100 MHz** timing (move IMEM/DMEM to BRAM/XPM, analyze EX→MEM critical path), expand ISA **(BNE/BGE/BLT, shifts, LUI/AUIPC)**, add 7-seg display for `{addr,data}`, publish coverage numbers, and stage follow-ons (minimal M-mode CSRs + trap handler, optional cache/AXI-Lite/Wishbone prep).
 
 ---
 
