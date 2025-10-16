@@ -22,7 +22,7 @@ module imem #(
         $readmemh(MEMFILE, mem);
         end 
         else begin
-        /*
+        
         //OFFICIAL TEST PROGRAM
         mem[0]  = 32'h0050_0113;
         mem[1]  = 32'h00C0_0193;
@@ -45,8 +45,9 @@ module imem #(
         mem[18] = 32'h0091_0133;
         mem[19] = 32'h0221_A023;
         mem[20] = 32'h0021_0063;
-        */
+        end
         
+        /*
         //HAZARD FREE TEST PROGRAM
         mem[0]  = 32'h0010_0093; // addi x1,  x0, 1
         mem[1]  = 32'h0020_0113; // addi x2,  x0, 2
@@ -66,7 +67,9 @@ module imem #(
         mem[13] = 32'h0000_0013; // addi x0,  x0, 0      ; nop
 
         mem[14] = 32'h015A_2023; // sw   x21, 0(x20)     ; mem[0x60] = 25
+        
         end
+        */
     end
 
     // Word index: use only the address bits you need (avoid over-slicing)
