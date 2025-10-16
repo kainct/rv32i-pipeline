@@ -24,12 +24,18 @@ I wanted a hands-on understanding of CPU microarchitecture beyond lectures:
 ---
 
 ## Timeline (High Level)
-1. **Week 1–2:** ALU + register file + single-cycle skeleton; basic tests.
-2. **Week 3:** 5-stage split, immediate decode, pipeline regs, WB path.
-3. **Week 4:** Hazard unit — forwarding, load-use detection; directed hazard tests.
-4. **Week 5:** Control hazards (beq/jal), PCSrcE, flush mechanics; X-safety cleanup.
-5. **Week 6:** FPGA bring-up — constraints, BRAM inference, LED debug.
-6. **Week 7+:** Fix race in branch decision; stabilize simulation defines/filesets; README/docs.
+1. **Week 1–2 - Module bring-up (single-cycle path):**
+  Build Flip-flops, IMEM/DMEM, ALU, adder, muxes, controller, immediate-extend; Write testbenches for unit modules; Unit tests pass; Single-cycle top runs a test program.
+2. **Week 3 - Pipeline cut:**
+  Refactor to 5 stages; add IF/ID, ID/EX, EX/MEM, MEM/WB registers. Core runs without hazard handling.
+3. **Week 4 - Hazards & tests:**
+  Implement forwarding and load-use stall; add directed tests for fwdA/fwdB, stall/flush behavior. 
+4. **Week 5 - Stabilization:**
+  Debug control/branch timing; eliminate race in branch decision.
+5. **Week 6 - FPGA bring-up:**
+  Basys3 constraints, clocking (clk_wiz), LED debug wiring; bitstream boots and shows expected LED activity.
+6. **Week 7 - Documentation:**
+  Write README, block diagrams, timing/utilization notes; capture waveforms and results. 
 
 ---
 
