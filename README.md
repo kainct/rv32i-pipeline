@@ -208,7 +208,7 @@ instruction flows IF→ID→EX→MEM→WB.
 - **CLK:** on-board **100MHz → clk_wiz → 50 MHz** core clock.
 - **Reset:** `rst_BTN (BTN0)` used for synchronous reset.
 
-![Basys3 bring-up with RV32I core running](docs/img/board/basys3_run.jpg)
+![Basys3 bring-up with RV32I core running](docs/img/board/basys_3_run.jpg)
   ---
   
 ## Verification
