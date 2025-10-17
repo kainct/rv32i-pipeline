@@ -209,6 +209,9 @@ instruction flows IF→ID→EX→MEM→WB.
 - **Reset:** `rst_BTN (BTN0)` used for synchronous reset.
 
 ![Basys3 bring-up with RV32I core running](docs/img/board/basys_3_run.jpg)
+
+> **Correctness check.** The design maps LEDs to `{ALUResultM[7:0], WriteDataM[7:0]}`.  
+> In this run, the **final store** shows `ALUResultM = 0x64` (address **100**) and `WriteDataM = 0x19` (decimal **25**) — exactly what the test program expects (`mem[100] = 25`).
   ---
   
 ## Verification
