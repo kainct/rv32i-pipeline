@@ -37,7 +37,7 @@
 ## Architecture
 ![5-stage pipeline block diagram](docs/img/architecture/eng85rb_blockdiagram.png)
 
-<sub>**Image credit:** David Money Harris & Sarah L. Harris, *Digital Design and Computer Architecture — RISC-V Edition*; diagram from the ENG85RB online course materials. © Harris & Harris / publisher. Used here for educational/reference purposes. If you are the rights holder and prefer removal, please open an issue.</sub>
+<sub>**Adapted from:** David Money Harris & Sarah L. Harris, *Digital Design and Computer Architecture — RISC-V Edition*, ENG85RB course slides. © Harris & Harris. Annotations by this project; any mistakes are mine.</sub>
 
 - **Structure:** 5 stages — IF/ID/EX/MEM/WB with IF/ID, ID/EX, EX/MEM, MEM/WB regs
 - **Immediate/types:** I/S/B/J via `ImmSrc`, sign-extended in Decode
