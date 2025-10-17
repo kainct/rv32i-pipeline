@@ -201,6 +201,16 @@ instruction flows IF→ID→EX→MEM→WB.
 
 ---
 
+## Basys3 Bring-Up
+- **DONE** LED lit (bitstream loaded), **POWER** LED on.  
+- Several user **LEDs (LD0...LD15)** active - this design maps LEDs to the write-back bus for quick visual debug:
+  `  {LED[15:8], LED[7:0]} = {ALUResultM[7:0], WriteDataM[7:0]} `
+- **CLK:** on-board **100MHz → clk_wiz → 50 MHz** core clock.
+- **Reset:** `rst_BTN (BTN0)` used for synchronous reset.
+
+![Basys3 bring-up with RV32I core running](docs/img/board/basys3_run.jpg)
+  ---
+  
 ## Verification
 - **Directed tests:** ALU/immediates, branches (taken/not), `lw/sw`, hazard paths (fwdA/B), load-use stall, branch/jump flush.
 - **Assertions:** x0 write-protect; valid control encodings; `FlushD = PCSrcE`; `FlushE = PCSrcE | lwStall`.
